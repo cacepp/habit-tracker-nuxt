@@ -8,7 +8,11 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,js,vue}": "eslint --fix"
   },
   "dependencies": {
     "@nuxt/eslint": "1.12.1",
@@ -18,6 +22,8 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
-    "@nuxt/eslint-config": "^1.12.1"
+    "@nuxt/eslint-config": "^1.12.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7"
   }
 }
