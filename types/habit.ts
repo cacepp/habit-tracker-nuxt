@@ -1,4 +1,4 @@
-type HabitType = boolean | number;
+export type HabitType = 'boolean' | 'numeric';
 
 export interface Habit {
   id: number;
@@ -10,10 +10,10 @@ export interface Habit {
   createdAt: string;
 }
 
-export function isBooleanHabit(habit: Habit): habit is Habit & { type: boolean } {
-  return typeof habit.type === 'boolean';
+export function isBooleanHabit(habit: Habit): habit is Habit & { type: 'boolean' } {
+  return habit.type === 'boolean';
 }
 
-export function isNumericHabit(habit: Habit): habit is Habit & { type: number; target: number; unit: string } {
-  return typeof habit.type === 'number';
+export function isNumericHabit(habit: Habit): habit is Habit & { type: 'numeric'; target: number; unit: string } {
+  return habit.type === 'numeric';
 }
