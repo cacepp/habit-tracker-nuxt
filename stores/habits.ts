@@ -29,7 +29,7 @@ export const useHabitsStore = defineStore('habits', () => {
   const addHabit = async (data: Omit<Habit, 'id' | 'createdAt'>) => {
     const newHabit: Habit = {
       id: Date.now(),
-      createdAt: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString(),
       ...data,
     };
 
