@@ -1,19 +1,16 @@
-import { type Habit, isBooleanHabit } from '~/types';
+import type { Habit } from '~/types';
 import { useIndexedDB } from '~/plugins/indexeddb.client';
 
 export const useHabitsStore = defineStore('habits', () => {
   const habits = ref<Habit[]>([]);
-  const isLoading = ref<boolean>(false);
+  const isLoading = ref<boolean>(true);
   const error = ref<string | null>(null);
-
-  const booleanHabits = computed(() =>
-    habits.value.filter(isBooleanHabit),
-  );
 
   const db = useIndexedDB();
 
   const fetchHabits = async () => {
     isLoading.value = true;
+    error.value = null;
     try {
       habits.value = await db.getHabits();
     }
@@ -33,22 +30,30 @@ export const useHabitsStore = defineStore('habits', () => {
       ...data,
     };
 
-    await db.addHabit(newHabit);
-    await fetchHabits();
+    habits.value.push(newHabit);
+
+    try {
+      await db.addHabit(newHabit);
+    }
+    catch (e) {
+      habits.value = habits.value.filter(h => h.id !== newHabit.id);
+      throw e;
+    }
   };
 
   const updateHabit = async (habit: Habit) => {
+    const index = habits.value.findIndex(h => h.id === habit.id);
+    if (index !== -1) habits.value[index] = habit;
     await db.updateHabit(habit);
-    await fetchHabits();
   };
 
   const deleteHabit = async (id: number) => {
+    habits.value = habits.value.filter(h => h.id !== id);
     await db.deleteHabit(id);
-    await fetchHabits();
   };
 
   return {
-    habits, error, booleanHabits,
+    habits, error, isLoading,
     fetchHabits, addHabit, updateHabit, deleteHabit,
   };
 });
