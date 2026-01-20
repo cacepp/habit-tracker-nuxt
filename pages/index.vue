@@ -39,7 +39,7 @@ const toggleBooleanHabit = async (
   await entriesStore.upsertEntry({
     habitId,
     date: selectedDate.value,
-    value: !isChecked,
+    value: isChecked,
   });
 };
 
