@@ -1,12 +1,14 @@
 import { get, set } from 'idb-keyval';
-import type { Habit } from '~/types';
+import type { Habit, HabitEntry } from '~/types';
 
 enum DBKeys {
   HABITS = 'habits',
+  ENTRIES = 'entries',
 }
 
 export default defineNuxtPlugin(() => {
   const indexedDB = {
+    // HABITS
     async getHabits() {
       const habits = await get<Habit[]>(DBKeys.HABITS);
       return habits || [];
@@ -34,6 +36,39 @@ export default defineNuxtPlugin(() => {
       const habits = await this.getHabits();
       const newHabits = habits.filter(h => h.id !== id);
       await this.saveHabits(newHabits);
+    },
+
+    // ENTRIES
+    async getEntries() {
+      const entries = await get<HabitEntry[]>(DBKeys.ENTRIES);
+      return entries || [];
+    },
+
+    async saveEntries(entries: HabitEntry[]) {
+      await set(DBKeys.ENTRIES, entries);
+    },
+
+    async getEntriesByDate(date: string) {
+      const entries = await this.getEntries();
+      return entries.filter(e => e.date === date);
+    },
+
+    async addEntry(entry: HabitEntry) {
+      const entries = await this.getEntries();
+      await this.saveEntries([...entries, entry]);
+    },
+
+    async updateEntry(changedEntry: HabitEntry) {
+      const entries = await this.getEntries();
+      const newEntries = entries.map(e =>
+        e.id === changedEntry.id ? changedEntry : e,
+      );
+      await this.saveEntries(newEntries);
+    },
+
+    async deleteEntry(id: number) {
+      const entries = await this.getEntries();
+      await this.saveEntries(entries.filter(e => e.id !== id));
     },
   };
 
