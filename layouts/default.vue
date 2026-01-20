@@ -31,6 +31,7 @@ const items = ref<NavigationMenuItem[]>([
       />
     </div>
     <slot />
+    <ScrollToTop />
   </div>
 </template>
 
