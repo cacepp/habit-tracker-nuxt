@@ -4,6 +4,11 @@ const entriesStore = useHabitEntriesStore();
 
 const selectedDate = ref(toDateString(new Date().toISOString()));
 
+const changeDate = async (newDate: string) => {
+  selectedDate.value = newDate;
+  await entriesStore.fetchEntriesByDate(selectedDate.value);
+};
+
 const habitsWithEntries = computed(() => {
   return habitsStore.habits.map(habit => ({
     habit,
@@ -84,9 +89,15 @@ onMounted(async () => {
   <div class="p-2">
     /pages/index.vue
     <section class="mb-4">
-      <h1>Сегодня</h1>
-      <p>{{ formatDateTime(selectedDate) }}</p>
       <p>Прогресс: {{ progressPercent }}%</p>
+    </section>
+
+    <section class="w-100">
+      <DailyCalendar
+        :selected-date="selectedDate"
+        size="lg"
+        @update:date="changeDate"
+      />
     </section>
 
     <section class="flex justify-center sticky top-0 z-50 p-6 bg-slate-900">
