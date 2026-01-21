@@ -154,7 +154,7 @@ onMounted(async () => {
               />
             </div>
 
-            {{ entry?.value ?? 0 }} / {{ habit.target }}
+            {{ entry?.value || 0 }} / {{ habit.target }}
           </template>
 
           <template v-else>
