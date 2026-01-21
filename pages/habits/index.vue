@@ -3,7 +3,7 @@ import type { Habit } from '~/types';
 
 const habitsStore = useHabitsStore();
 const { habits, isLoading } = storeToRefs(habitsStore);
-const { fetchHabits, deleteHabit } = habitsStore;
+const { fetchHabits, deleteHabit, fetchUnits } = habitsStore;
 
 const isCreateModalOpen = ref<boolean>(false);
 const isEditModalOpen = ref<boolean>(false);
@@ -35,6 +35,7 @@ const handleDelete = async (id: number) => {
 
 onMounted(() => {
   fetchHabits();
+  fetchUnits();
 });
 </script>
 

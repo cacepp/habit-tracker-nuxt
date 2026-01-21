@@ -30,6 +30,10 @@ const form = ref<FormData>({
   color: '#2eb648',
 });
 
+const newUnit = ref('');
+const isAddingUnit = ref(false);
+const popoverState = ref(false);
+
 const resetForm = () => {
   form.value = {
     name: '',
@@ -69,6 +73,14 @@ watch(
 const handleSubmit = async () => {
   loading.value = true;
   try {
+    if (
+      form.value.type === 'numeric'
+      && form.value.unit
+      && !habitsStore.units.includes(form.value.unit)
+    ) {
+      await habitsStore.addUnit(form.value.unit);
+    }
+
     const habitData: Omit<Habit, 'id' | 'createdAt'> = {
       name: form.value.name.trim(),
       type: form.value.type,
@@ -96,6 +108,26 @@ const handleSubmit = async () => {
   finally {
     loading.value = false;
   }
+};
+
+const addNewUnit = async () => {
+  const unit = newUnit.value.trim();
+  if (!unit) return;
+
+  if (!habitsStore.units.includes(unit)) {
+    await habitsStore.addUnit(unit);
+  }
+
+  form.value.unit = unit;
+  newUnit.value = '';
+  isAddingUnit.value = false;
+};
+
+const confirmAddUnit = async () => {
+  if (!newUnit.value.trim()) return;
+
+  await addNewUnit();
+  popoverState.value = false;
 };
 </script>
 
@@ -145,12 +177,45 @@ const handleSubmit = async () => {
         <label class="block text-sm font-medium mb-1">
           Единица измерения <span class="text-red-500">*</span>
         </label>
-        <UInput
-          v-model="form.unit"
-          placeholder="шт, л, км"
-          :disabled="loading"
-          class="w-full"
-        />
+
+        <div class="flex gap-2">
+          <USelect
+            v-model="form.unit"
+            :items="habitsStore.units.map(u => ({
+              label: u,
+              value: u,
+            }))"
+            placeholder="Выберите единицу"
+            class="w-full"
+          />
+
+          <UPopover v-model:open="popoverState">
+            <UButton
+              icon="i-lucide-plus"
+              variant="soft"
+              @click="() => {
+                isAddingUnit = true;
+                popoverState = true;
+              }"
+            />
+
+            <template #content>
+              <div class="flex gap-1">
+                <UInput
+                  v-model="newUnit"
+                  class="flex-1"
+                  placeholder="Например: км, мин, шт"
+                />
+
+                <UButton
+                  icon="i-lucide-check"
+                  color="primary"
+                  @click="confirmAddUnit"
+                />
+              </div>
+            </template>
+          </UPopover>
+        </div>
       </div>
 
       <div>

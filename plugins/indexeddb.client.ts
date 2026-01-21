@@ -4,6 +4,7 @@ import type { Habit, HabitEntry } from '~/types';
 enum DBKeys {
   HABITS = 'habits',
   ENTRIES = 'entries',
+  UNITS = 'units',
 }
 
 export default defineNuxtPlugin(() => {
@@ -69,6 +70,15 @@ export default defineNuxtPlugin(() => {
     async deleteEntry(id: number) {
       const entries = await this.getEntries();
       await this.saveEntries(entries.filter(e => e.id !== id));
+    },
+
+    // UNITS
+    async getUnits(): Promise<string[]> {
+      return (await get<string[]>(DBKeys.UNITS)) ?? [];
+    },
+
+    async saveUnits(units: string[]) {
+      await set(DBKeys.UNITS, units);
     },
   };
 

@@ -13,4 +13,7 @@ export interface IndexedDBClient {
   addEntry(entry: HabitEntry): Promise<void>;
   updateEntry(entry: HabitEntry): Promise<void>;
   deleteEntry(id: number): Promise<void>;
+
+  getUnits(): Promise<string[]>;
+  saveUnits(units: string[]): Promise<void>;
 }

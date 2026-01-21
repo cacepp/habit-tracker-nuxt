@@ -5,6 +5,7 @@ export const useHabitsStore = defineStore('habits', () => {
   const habits = ref<Habit[]>([]);
   const isLoading = ref<boolean>(true);
   const error = ref<string | null>(null);
+  const units = ref<string[]>([]);
 
   const db = useIndexedDB();
 
@@ -52,8 +53,27 @@ export const useHabitsStore = defineStore('habits', () => {
     await db.deleteHabit(id);
   };
 
+  const fetchUnits = async () => {
+    units.value = await db.getUnits();
+  };
+
+  const addUnit = async (unit: string) => {
+    unit = unit.trim();
+    if (!unit || units.value.includes(unit)) return;
+
+    units.value.push(unit);
+
+    await db.saveUnits([...units.value]);
+  };
+
+  const deleteUnit = async (unit: string) => {
+    units.value = units.value.filter(u => u !== unit);
+    await db.saveUnits([...units.value]);
+  };
+
   return {
-    habits, error, isLoading,
+    habits, error, isLoading, units,
     fetchHabits, addHabit, updateHabit, deleteHabit,
+    fetchUnits, addUnit, deleteUnit,
   };
 });
