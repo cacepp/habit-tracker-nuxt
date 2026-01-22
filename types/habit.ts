@@ -1,11 +1,16 @@
 export type HabitType = 'boolean' | 'numeric';
 
+export interface HabitUnit {
+  id: number;
+  name: string;
+}
+
 export interface Habit {
   id: number;
   name: string;
   type: HabitType;
   target?: number;
-  unit?: string;
+  unitId?: number;
   color: string;
   createdAt: string;
 }

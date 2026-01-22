@@ -3,6 +3,7 @@ import { type Habit, isBooleanHabit, isNumericHabit } from '~/types';
 
 defineProps<{
   habit: Habit;
+  unitName?: string;
 }>();
 
 defineEmits<{
@@ -13,7 +14,7 @@ defineEmits<{
 
 <template>
   <div
-    class="group hover:shadow-lg transition-all duration-200 h-full flex flex-col p-0 rounded-lg overflow-hidden w-80 border-2"
+    class="group hover:shadow-lg transition-all duration-200 h-full flex flex-col p-0 rounded-lg overflow-hidden max-w-80 border-2"
     :style="{ borderColor: habit.color }"
   >
     <div class="flex-1 p-4 flex flex-col">
@@ -24,7 +25,7 @@ defineEmits<{
               {{ habit.name }}
             </h3>
             <UBadge
-              :label="isBooleanHabit(habit) ? 'Да/Нет' : `${habit.unit ?? ''}`"
+              :label="isBooleanHabit(habit) ? 'Да/Нет' : `${unitName ?? ''}`"
               variant="soft"
               size="sm"
               color="neutral"
@@ -44,7 +45,7 @@ defineEmits<{
             Цель
           </div>
           <div class="text-2xl font-bold">
-            {{ habit.target }} {{ habit.unit }}
+            {{ habit.target }} {{ unitName }}
           </div>
         </div>
 

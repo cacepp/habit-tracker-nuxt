@@ -9,8 +9,16 @@ const isCreateModalOpen = ref<boolean>(false);
 const isEditModalOpen = ref<boolean>(false);
 
 const editHabit = ref<Habit | null>(null);
-const reversedHabits = computed(() => {
-  return [...habits.value].reverse();
+const habitsWithUnitNameReversed = computed(() => {
+  return [...habitsStore.habits]
+    .reverse()
+    .map((habit) => {
+      const unitObj = habitsStore.units.find(u => u.id === habit.unitId);
+      return {
+        ...habit,
+        unitName: unitObj?.name,
+      };
+    });
 });
 
 const handleCreated = () => {
@@ -42,88 +50,88 @@ onMounted(() => {
 <template>
   <div>
     /pages/habits/index.vue
+
     <div>
-      <div>
-        <UButton
-          size="lg"
-          color="primary"
-          icon="i-heroicons-plus"
-          @click="isCreateModalOpen = true"
-        >
-          Создать привычку
-        </UButton>
+      <UButton
+        size="lg"
+        color="primary"
+        icon="i-heroicons-plus"
+        @click="isCreateModalOpen = true"
+      >
+        Создать привычку
+      </UButton>
 
-        <div v-if="isLoading">
-          загрузка...
+      <div v-if="isLoading">
+        загрузка...
+      </div>
+
+      <div
+        v-else-if="!habits.length"
+        class="text-center py-20 px-8"
+      >
+        <div>
+          <UIcon
+            name="i-heroicons-calendar-days"
+          />
         </div>
+        <h3 class="text-lg font-medium mb-2">
+          Привычек пока нет
+        </h3>
+      </div>
 
-        <div
-          v-else-if="!habits.length"
-          class="text-center py-20 px-8"
+      <div v-else>
+        <TransitionGroup
+          name="habit"
+          tag="div"
+          class="flex flex-wrap gap-6 *:min-w-[320px] *:flex-1"
         >
-          <div>
-            <UIcon
-              name="i-heroicons-calendar-days"
+          <HabitCard
+            v-for="habit in habitsWithUnitNameReversed"
+            :key="habit.id"
+            :habit="habit"
+            :unit-name="habit.unitName"
+            class="w-full"
+            @edit="handleEdit"
+            @delete="handleDelete"
+          />
+        </TransitionGroup>
+      </div>
+
+      <UModal v-model:open="isCreateModalOpen">
+        <template #content>
+          <div class="p-4">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-2xl font-bold">
+                Новая привычка
+              </h2>
+            </div>
+
+            <HabitForm
+              @created="handleCreated"
+              @close="isCreateModalOpen = false"
             />
           </div>
-          <h3 class="text-lg font-medium mb-2">
-            Привычек пока нет
-          </h3>
-        </div>
+        </template>
+      </UModal>
 
-        <div v-else>
-          <TransitionGroup
-            name="habit"
-            tag="div"
-            class="grid gap-6 auto-rows-[minmax(240px,auto)] grid-cols-[repeat(auto-fit,minmax(320px,1fr))]"
-          >
-            <HabitCard
-              v-for="habit in reversedHabits"
-              :key="habit.id"
-              :habit="habit"
-              class="w-full"
-              @edit="handleEdit"
-              @delete="handleDelete"
+      <UModal v-model:open="isEditModalOpen">
+        <template #content>
+          <div class="p-4">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-2xl font-bold">
+                Редактировать привычку
+              </h2>
+            </div>
+
+            <HabitForm
+              v-if="editHabit"
+              :habit="editHabit"
+              @updated="handleUpdated"
+              @close="isEditModalOpen = false"
             />
-          </TransitionGroup>
-        </div>
-
-        <UModal v-model:open="isCreateModalOpen">
-          <template #content>
-            <div class="p-4">
-              <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold">
-                  Новая привычка
-                </h2>
-              </div>
-
-              <HabitForm
-                @created="handleCreated"
-                @close="isCreateModalOpen = false"
-              />
-            </div>
-          </template>
-        </UModal>
-
-        <UModal v-model:open="isEditModalOpen">
-          <template #content>
-            <div class="p-4">
-              <div class="flex items-center justify-between mb-6">
-                <h2 class="text-2xl font-bold">
-                  Редактировать привычку
-                </h2>
-              </div>
-
-              <HabitForm
-                v-if="editHabit"
-                :habit="editHabit"
-                @updated="handleUpdated"
-                @close="isEditModalOpen = false"
-              />
-            </div>
-          </template>
-        </UModal>
-      </div>
+          </div>
+        </template>
+      </UModal>
     </div>
   </div>
 </template>

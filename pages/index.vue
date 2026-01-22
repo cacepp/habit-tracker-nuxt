@@ -86,7 +86,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="p-2">
+  <div>
     /pages/index.vue
     <section class="mb-4">
       <p>Прогресс: {{ progressPercent }}%</p>
