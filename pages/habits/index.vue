@@ -97,39 +97,31 @@ onMounted(() => {
         </TransitionGroup>
       </div>
 
-      <UModal v-model:open="isCreateModalOpen">
-        <template #content>
-          <div class="p-4">
-            <div class="flex items-center justify-between mb-6">
-              <h2 class="text-2xl font-bold">
-                Новая привычка
-              </h2>
-            </div>
-
-            <HabitForm
-              @created="handleCreated"
-              @close="isCreateModalOpen = false"
-            />
-          </div>
+      <UModal
+        v-model:open="isCreateModalOpen"
+        title="Новая привычка"
+        description=" "
+      >
+        <template #body>
+          <HabitForm
+            @created="handleCreated"
+            @close="isCreateModalOpen = false"
+          />
         </template>
       </UModal>
 
-      <UModal v-model:open="isEditModalOpen">
-        <template #content>
-          <div class="p-4">
-            <div class="flex items-center justify-between mb-6">
-              <h2 class="text-2xl font-bold">
-                Редактировать привычку
-              </h2>
-            </div>
-
-            <HabitForm
-              v-if="editHabit"
-              :habit="editHabit"
-              @updated="handleUpdated"
-              @close="isEditModalOpen = false"
-            />
-          </div>
+      <UModal
+        v-model:open="isEditModalOpen"
+        title="Редактировать привычку"
+        description=" "
+      >
+        <template #body>
+          <HabitForm
+            v-if="editHabit"
+            :habit="editHabit"
+            @updated="handleUpdated"
+            @close="isEditModalOpen = false"
+          />
         </template>
       </UModal>
     </div>
