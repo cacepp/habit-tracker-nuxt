@@ -1,33 +1,7 @@
 <script setup lang="ts">
 import type { Habit, HabitUnit } from '~/types';
-import * as v from 'valibot';
 import type { FormSubmitEvent } from '@nuxt/ui';
-
-const formSchema = v.pipe(
-  v.object({
-    name: v.pipe(
-      v.string(),
-      v.trim(),
-      v.minLength(1, 'Введите название привычки'),
-    ),
-    type: v.picklist(['boolean', 'numeric']),
-    target: v.optional(
-      v.pipe(
-        v.number(),
-        v.minValue(1, 'Минимум 1'),
-      )),
-    unitId: v.optional(v.number()),
-    color: v.string(),
-  }),
-  v.check(
-    data =>
-      data.type !== 'numeric'
-      || (data.target !== undefined && data.unitId !== undefined),
-    'Для числовой привычки укажите цель и единицу измерения',
-  ),
-);
-
-type FormSchema = v.InferInput<typeof formSchema>;
+import { formSchema, type HabitFormSchema } from '~/schemas/habit.schema';
 
 const props = defineProps<{
   habit?: Habit | null;
@@ -42,7 +16,7 @@ const emit = defineEmits<{
 const habitsStore = useHabitsStore();
 const loading = ref<boolean>(false);
 
-const formState = reactive<FormSchema>({
+const formState = reactive<HabitFormSchema>({
   name: '',
   type: 'boolean',
   target: 1,
@@ -92,7 +66,7 @@ watch(
   { immediate: true },
 );
 
-const onSubmit = async (event: FormSubmitEvent<FormSchema>) => {
+const onSubmit = async (event: FormSubmitEvent<HabitFormSchema>) => {
   loading.value = true;
 
   const data = event.data;
