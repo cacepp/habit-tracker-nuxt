@@ -1,11 +1,11 @@
-import type { Habit } from '~/types';
+import type { Habit, HabitUnit } from '~/types';
 import { useIndexedDB } from '~/plugins/indexeddb.client';
 
 export const useHabitsStore = defineStore('habits', () => {
   const habits = ref<Habit[]>([]);
   const isLoading = ref<boolean>(true);
   const error = ref<string | null>(null);
-  const units = ref<string[]>([]);
+  const units = ref<HabitUnit[]>([]);
 
   const db = useIndexedDB();
 
@@ -17,6 +17,7 @@ export const useHabitsStore = defineStore('habits', () => {
     }
     catch (e) {
       error.value = `Ошибка загрузки: ${e}`;
+      console.log(error.value);
       habits.value = [];
     }
     finally {
@@ -57,23 +58,49 @@ export const useHabitsStore = defineStore('habits', () => {
     units.value = await db.getUnits();
   };
 
-  const addUnit = async (unit: string) => {
-    unit = unit.trim();
-    if (!unit || units.value.includes(unit)) return;
-
-    units.value.push(unit);
-
-    await db.saveUnits([...units.value]);
+  const addUnit = async (name: string) => {
+    if (units.value.some(u => u.name.toLowerCase() === name.toLowerCase())) {
+      error.value = 'Ошибка: единица измерения с таким именем уже существует';
+      console.log(error.value);
+      return;
+    }
+    const newUnit: HabitUnit = { id: Date.now(), name };
+    units.value.push(newUnit);
+    await db.saveUnits(units.value.map(u => ({ ...u })));
   };
 
-  const deleteUnit = async (unit: string) => {
-    units.value = units.value.filter(u => u !== unit);
-    await db.saveUnits([...units.value]);
+  const updateUnit = async (id: number, name: string) => {
+    if (
+      units.value.some(
+        u => u.name.toLowerCase() === name.toLowerCase() && u.id !== id,
+      )
+    ) {
+      error.value = 'Ошибка: единица измерения с таким именем уже существует';
+      return;
+    }
+
+    const unit = units.value.find(u => u.id === id);
+    if (!unit) return;
+    unit.name = name;
+    await db.saveUnits(units.value.map(u => ({ ...u })));
+  };
+
+  const deleteUnit = async (id: number) => {
+    const count = habits.value.filter(h => h.unitId === id).length;
+
+    if (count > 0) {
+      error.value = `Привычек с такой единицей: ${count}`;
+      console.log(error.value);
+      return;
+    }
+
+    units.value = units.value.filter(u => u.id !== id);
+    await db.saveUnits(units.value.map(u => ({ ...u })));
   };
 
   return {
     habits, error, isLoading, units,
     fetchHabits, addHabit, updateHabit, deleteHabit,
-    fetchUnits, addUnit, deleteUnit,
+    fetchUnits, addUnit, updateUnit, deleteUnit,
   };
 });

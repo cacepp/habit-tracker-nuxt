@@ -30,7 +30,9 @@ const items = ref<NavigationMenuItem[]>([
         class="data-[orientation=vertical]:w-48 ml-1"
       />
     </div>
-    <slot />
+    <div class="p-2">
+      <slot />
+    </div>
     <ScrollToTop />
   </div>
 </template>

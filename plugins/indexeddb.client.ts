@@ -1,5 +1,5 @@
 import { get, set } from 'idb-keyval';
-import type { Habit, HabitEntry } from '~/types';
+import type { Habit, HabitEntry, HabitUnit } from '~/types';
 
 enum DBKeys {
   HABITS = 'habits',
@@ -73,11 +73,11 @@ export default defineNuxtPlugin(() => {
     },
 
     // UNITS
-    async getUnits(): Promise<string[]> {
-      return (await get<string[]>(DBKeys.UNITS)) ?? [];
+    async getUnits(): Promise<HabitUnit[]> {
+      return (await get<HabitUnit[]>(DBKeys.UNITS)) ?? [];
     },
 
-    async saveUnits(units: string[]) {
+    async saveUnits(units: HabitUnit[]) {
       await set(DBKeys.UNITS, units);
     },
   };

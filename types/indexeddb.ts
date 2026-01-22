@@ -1,4 +1,4 @@
-import type { Habit, HabitEntry } from '~/types';
+import type { Habit, HabitEntry, HabitUnit } from '~/types';
 
 export interface IndexedDBClient {
   getHabits(): Promise<Habit[]>;
@@ -14,6 +14,6 @@ export interface IndexedDBClient {
   updateEntry(entry: HabitEntry): Promise<void>;
   deleteEntry(id: number): Promise<void>;
 
-  getUnits(): Promise<string[]>;
-  saveUnits(units: string[]): Promise<void>;
+  getUnits(): Promise<HabitUnit[]>;
+  saveUnits(units: HabitUnit[]): Promise<void>;
 }
