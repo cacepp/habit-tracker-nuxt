@@ -61,8 +61,7 @@ export const useHabitsStore = defineStore('habits', () => {
   const addUnit = async (name: string) => {
     if (units.value.some(u => u.name.toLowerCase() === name.toLowerCase())) {
       error.value = 'Ошибка: единица измерения с таким именем уже существует';
-      console.log(error.value);
-      return;
+      throw new Error(`Единица измерения с таким именем ("${name}") уже существует`);
     }
     const newUnit: HabitUnit = { id: Date.now(), name };
     units.value.push(newUnit);
@@ -70,13 +69,9 @@ export const useHabitsStore = defineStore('habits', () => {
   };
 
   const updateUnit = async (id: number, name: string) => {
-    if (
-      units.value.some(
-        u => u.name.toLowerCase() === name.toLowerCase() && u.id !== id,
-      )
-    ) {
+    if (units.value.some(u => u.name.toLowerCase() === name.toLowerCase() && u.id !== id)) {
       error.value = 'Ошибка: единица измерения с таким именем уже существует';
-      return;
+      throw new Error(`Единица измерения с таким именем ("${name}") уже существует`);
     }
 
     const unit = units.value.find(u => u.id === id);
@@ -90,8 +85,7 @@ export const useHabitsStore = defineStore('habits', () => {
 
     if (count > 0) {
       error.value = `Привычек с такой единицей: ${count}`;
-      console.log(error.value);
-      return;
+      throw new Error(`Привычек с такой единицей: ${count}`);
     }
 
     units.value = units.value.filter(u => u.id !== id);
