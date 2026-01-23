@@ -22,16 +22,18 @@ const formState = reactive<HabitFormSchema>({
   target: 1,
   unitId: undefined,
   color: '#2eb648',
+  icon: 'i-lucide-calendar-check',
 });
 
 const newUnit = ref<string>('');
 const editingUnit = ref<HabitUnit | null>(null);
 
 const isAddingUnit = ref(false);
-const modalState = reactive<{ add: boolean; edit: boolean; unitTable: boolean }>({
+const modalState = reactive({
   add: false,
   edit: false,
   unitTable: false,
+  icon: false,
 });
 
 const toast = useToast();
@@ -42,6 +44,7 @@ const resetForm = () => {
   formState.target = 1;
   formState.unitId = undefined;
   formState.color = '#2eb648';
+  formState.icon = 'i-lucide-calendar-check';
 };
 
 const typeOptions = [
@@ -60,6 +63,7 @@ watch(
       formState.target = habit.target || 1;
       formState.unitId = habit.unitId ?? undefined;
       formState.color = habit.color;
+      formState.icon = habit.icon;
     }
     else {
       resetForm();
@@ -78,6 +82,7 @@ const onSubmit = async (event: FormSubmitEvent<HabitFormSchema>) => {
       name: data.name,
       type: data.type,
       color: data.color,
+      icon: data.icon,
       ...(data.type === 'numeric' && {
         target: data.target!,
         unitId: data.unitId!,
@@ -452,26 +457,50 @@ const handleDeleteUnit = async (id: number) => {
         </UFormField>
       </div>
 
-      <UFormField
-        label="Цвет"
-        name="color"
-        required
-      >
-        <UPopover>
-          <UButton
-            color="neutral"
-            variant="subtle"
-            icon="i-lucide-brush"
-          />
-
-          <template #content>
-            <UColorPicker
-              v-model="formState.color"
-              mode="click"
+      <div class="flex gap-8">
+        <UFormField
+          label="Цвет"
+          name="color"
+          required
+        >
+          <UPopover>
+            <UButton
+              color="neutral"
+              variant="subtle"
+              icon="i-lucide-brush"
             />
-          </template>
-        </UPopover>
-      </UFormField>
+
+            <template #content>
+              <UColorPicker
+                v-model="formState.color"
+                mode="click"
+              />
+            </template>
+          </UPopover>
+        </UFormField>
+
+        <UFormField
+          label="Иконка"
+          name="icon"
+          required
+        >
+          <UPopover v-model:open="modalState.icon">
+            <UButton
+              color="neutral"
+              variant="subtle"
+              :icon="formState.icon"
+            />
+
+            <template #content>
+              <IconPicker
+                v-model="formState.icon"
+                class="max-h-50"
+                @close="modalState.icon = false"
+              />
+            </template>
+          </UPopover>
+        </UFormField>
+      </div>
 
       <div class="flex gap-3 pt-4">
         <UButton
