@@ -34,6 +34,8 @@ const modalState = reactive<{ add: boolean; edit: boolean; unitTable: boolean }>
   unitTable: false,
 });
 
+const toast = useToast();
+
 const resetForm = () => {
   formState.name = '';
   formState.type = 'boolean';
@@ -103,18 +105,44 @@ const onSubmit = async (event: FormSubmitEvent<HabitFormSchema>) => {
 
 const addNewUnit = async () => {
   const unit = newUnit.value;
-  if (!unit) return;
 
-  if (!habitsStore.units.some(u => u.name.toLowerCase() === unit.toLowerCase())) {
+  try {
     await habitsStore.addUnit(unit);
-  }
 
-  const added = habitsStore.units.find(u => u.name === unit);
-  if (added) {
-    formState.unitId = added.id;
+    const added = habitsStore.units.find(u => u.name === unit);
+    if (added) {
+      formState.unitId = added.id;
+    }
+
+    isAddingUnit.value = false;
+
+    toast.add({
+      title: `Ед. измерения "${unit}" успешно добавлена`,
+    });
   }
-  newUnit.value = '';
-  isAddingUnit.value = false;
+  catch (err) {
+    let errorMessage = 'Неизвестная ошибка';
+
+    if (err instanceof Error) {
+      errorMessage = err.message;
+    }
+    else if (typeof err === 'string') {
+      errorMessage = err;
+    }
+    else if (err && typeof err === 'object' && 'message' in err) {
+      errorMessage = (err as { message: string }).message;
+    }
+
+    toast.add({
+      title: `Ошибка`,
+      description: errorMessage,
+      color: 'error',
+    });
+    return;
+  }
+  finally {
+    newUnit.value = '';
+  }
 };
 
 const confirmAddUnit = async () => {
@@ -131,18 +159,91 @@ const editUnit = async (unit: HabitUnit) => {
 };
 
 const confirmEditUnit = async () => {
-  if (!editingUnit.value) return;
+  if (!editingUnit.value) {
+    toast.add({
+      title: 'Ошибка редактирования ед. измерения',
+      description: 'Название не должно быть пустым',
+      color: 'error',
+    });
+    return;
+  }
 
-  await habitsStore.updateUnit(editingUnit.value.id, newUnit.value);
+  try {
+    await habitsStore.updateUnit(editingUnit.value.id, newUnit.value);
 
-  editingUnit.value = null;
-  newUnit.value = '';
-  modalState.edit = false;
+    editingUnit.value = null;
+    newUnit.value = '';
+    modalState.edit = false;
+  }
+  catch (err) {
+    let errorMessage = 'Неизвестная ошибка';
+
+    if (err instanceof Error) {
+      errorMessage = err.message;
+    }
+    else if (typeof err === 'string') {
+      errorMessage = err;
+    }
+    else if (err && typeof err === 'object' && 'message' in err) {
+      errorMessage = (err as { message: string }).message;
+    }
+
+    toast.add({
+      title: 'Ошибка редактирования ед. измерения',
+      description: errorMessage,
+      color: 'error',
+    });
+  }
 };
 
-const confirmDeleteUnit = async (id: number) => {
-  formState.unitId = undefined;
-  await habitsStore.deleteUnit(id);
+const isDeleteAlertOpen = ref(false);
+const unitToDeleteId = ref<number | null>(null);
+
+const confirmDeleteUnit = async () => {
+  if (!unitToDeleteId.value) return;
+
+  try {
+    await habitsStore.deleteUnit(unitToDeleteId.value);
+
+    toast.add({
+      title: 'Единица успешно удалена',
+      color: 'success',
+    });
+
+    formState.unitId = undefined;
+  }
+  catch (err) {
+    let errorMessage = 'Неизвестная ошибка';
+
+    if (err instanceof Error) {
+      errorMessage = err.message;
+    }
+    else if (typeof err === 'string') {
+      errorMessage = err;
+    }
+    else if (err && typeof err === 'object' && 'message' in err) {
+      errorMessage = (err as { message: string }).message;
+    }
+
+    toast.add({
+      title: 'Невозможно удалить единицу',
+      description: errorMessage,
+      color: 'warning',
+    });
+  }
+  finally {
+    isDeleteAlertOpen.value = false;
+  }
+};
+
+const cancelDeleteUnit = async () => {
+  isDeleteAlertOpen.value = false;
+  unitToDeleteId.value = null;
+};
+
+const handleDeleteUnit = async (id: number) => {
+  unitToDeleteId.value = id;
+  isDeleteAlertOpen.value = true;
 };
 </script>
 
@@ -186,11 +287,9 @@ const confirmDeleteUnit = async (id: number) => {
           name="target"
           required
         >
-          <UInput
+          <UInputNumber
             v-model.number="formState.target"
-            type="number"
-            min="1"
-            placeholder="10000"
+            :min="1"
             :disabled="loading"
             class="w-full"
           />
@@ -266,7 +365,10 @@ const confirmDeleteUnit = async (id: number) => {
               />
 
               <template #body>
-                <div class="flex flex-col gap-2 p-1 min-w-40">
+                <div
+                  v-if="habitsStore.units.length > 0"
+                  class="flex flex-col gap-2 p-1 min-w-40"
+                >
                   <div
                     v-for="unit in habitsStore.units"
                     :key="unit.id"
@@ -312,10 +414,37 @@ const confirmDeleteUnit = async (id: number) => {
                         size="sm"
                         variant="soft"
                         color="error"
-                        @click="confirmDeleteUnit(unit.id)"
+                        @click="handleDeleteUnit(unit.id)"
+                      />
+
+                      <UAlert
+                        v-if="isDeleteAlertOpen"
+                        title="ВНИМАНИЕ!"
+                        description="Вы собираетесь удалить единицу. Подтвердите действие!"
+                        color="error"
+                        variant="subtle"
+                        orientation="horizontal"
+                        class="fixed bottom-14 left-0 backdrop-blur-xl"
+                        :actions="[
+                          {
+                            label: 'Удалить',
+                            color: 'error',
+                            variant: 'subtle',
+                            onClick: () => confirmDeleteUnit(),
+                          },
+                          {
+                            label: 'Отмена',
+                            color: 'neutral',
+                            variant: 'subtle',
+                            onClick: () => cancelDeleteUnit(),
+                          },
+                        ]"
                       />
                     </div>
                   </div>
+                </div>
+                <div v-else>
+                  Пусто
                 </div>
               </template>
             </USlideover>

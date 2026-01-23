@@ -37,8 +37,25 @@ const handleUpdated = () => {
   fetchHabits();
 };
 
-const handleDelete = async (id: number) => {
-  await deleteHabit(id);
+const isDeleteAlertOpen = ref(false);
+const habitToDeleteId = ref<number | null>(null);
+
+const confirmDelete = async () => {
+  if (!habitToDeleteId.value) return;
+
+  await deleteHabit(habitToDeleteId.value);
+  habitToDeleteId.value = null;
+  isDeleteAlertOpen.value = false;
+};
+
+const cancelDelete = () => {
+  habitToDeleteId.value = null;
+  isDeleteAlertOpen.value = false;
+};
+
+const handleDelete = (id: number) => {
+  habitToDeleteId.value = id;
+  isDeleteAlertOpen.value = true;
 };
 
 onMounted(() => {
@@ -56,6 +73,7 @@ onMounted(() => {
         size="lg"
         color="primary"
         icon="i-heroicons-plus"
+        class="mb-2"
         @click="isCreateModalOpen = true"
       >
         Создать привычку
@@ -125,6 +143,29 @@ onMounted(() => {
         </template>
       </UModal>
     </div>
+    <UAlert
+      v-if="isDeleteAlertOpen"
+      title="ВНИМАНИЕ!"
+      description="Вы собираетесь удалить привычку. Подтвердите действие!"
+      color="error"
+      variant="subtle"
+      orientation="horizontal"
+      class="fixed top-14 backdrop-blur-xl"
+      :actions="[
+        {
+          label: 'Удалить',
+          color: 'error',
+          variant: 'subtle',
+          onClick: confirmDelete,
+        },
+        {
+          label: 'Отмена',
+          color: 'neutral',
+          variant: 'subtle',
+          onClick: cancelDelete,
+        },
+      ]"
+    />
   </div>
 </template>
 
