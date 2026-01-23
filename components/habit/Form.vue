@@ -1,13 +1,7 @@
 <script setup lang="ts">
-import type { Habit, HabitType, HabitUnit } from '~/types';
-
-interface FormData {
-  name: string;
-  type: HabitType;
-  target?: number;
-  unitId?: number;
-  color: string;
-}
+import type { Habit, HabitUnit } from '~/types';
+import type { FormSubmitEvent } from '@nuxt/ui';
+import { formSchema, type HabitFormSchema } from '~/schemas/habit.schema';
 
 const props = defineProps<{
   habit?: Habit | null;
@@ -22,15 +16,15 @@ const emit = defineEmits<{
 const habitsStore = useHabitsStore();
 const loading = ref<boolean>(false);
 
-const form = ref<FormData>({
+const formState = reactive<HabitFormSchema>({
   name: '',
   type: 'boolean',
   target: 1,
   unitId: undefined,
-  color: 'primary',
+  color: '#2eb648',
 });
 
-const newUnit = ref('');
+const newUnit = ref<string>('');
 const editingUnit = ref<HabitUnit | null>(null);
 
 const isAddingUnit = ref(false);
@@ -40,14 +34,14 @@ const modalState = reactive<{ add: boolean; edit: boolean; unitTable: boolean }>
   unitTable: false,
 });
 
+const toast = useToast();
+
 const resetForm = () => {
-  form.value = {
-    name: '',
-    type: 'boolean' as const,
-    target: 1,
-    unitId: undefined,
-    color: 'primary',
-  };
+  formState.name = '';
+  formState.type = 'boolean';
+  formState.target = 1;
+  formState.unitId = undefined;
+  formState.color = '#2eb648';
 };
 
 const typeOptions = [
@@ -55,19 +49,17 @@ const typeOptions = [
   { label: 'Числовое значение', value: 'numeric' as const },
 ];
 
-const isNumeric = computed(() => form.value.type === 'numeric');
+const isNumeric = computed(() => formState.type === 'numeric');
 
 watch(
   () => props.habit,
   (habit) => {
     if (habit) {
-      form.value = {
-        name: habit.name,
-        type: habit.type,
-        target: habit.target || 1,
-        unitId: habit.unitId ?? undefined,
-        color: habit.color,
-      };
+      formState.name = habit.name;
+      formState.type = habit.type;
+      formState.target = habit.target || 1;
+      formState.unitId = habit.unitId ?? undefined;
+      formState.color = habit.color;
     }
     else {
       resetForm();
@@ -76,21 +68,19 @@ watch(
   { immediate: true },
 );
 
-const handleSubmit = async () => {
-  if (form.value.type === 'numeric' && !form.value.unitId) {
-    return;
-  }
-
+const onSubmit = async (event: FormSubmitEvent<HabitFormSchema>) => {
   loading.value = true;
+
+  const data = event.data;
 
   try {
     const habitData: Omit<Habit, 'id' | 'createdAt'> = {
-      name: form.value.name,
-      type: form.value.type,
-      color: form.value.color,
-      ...(form.value.type === 'numeric' && {
-        target: form.value.target,
-        unitId: form.value.unitId!,
+      name: data.name,
+      type: data.type,
+      color: data.color,
+      ...(data.type === 'numeric' && {
+        target: data.target!,
+        unitId: data.unitId!,
       }),
     };
 
@@ -115,18 +105,44 @@ const handleSubmit = async () => {
 
 const addNewUnit = async () => {
   const unit = newUnit.value;
-  if (!unit) return;
 
-  if (!habitsStore.units.some(u => u.name.toLowerCase() === unit.toLowerCase())) {
+  try {
     await habitsStore.addUnit(unit);
-  }
 
-  const added = habitsStore.units.find(u => u.name === unit);
-  if (added) {
-    form.value.unitId = added.id;
+    const added = habitsStore.units.find(u => u.name === unit);
+    if (added) {
+      formState.unitId = added.id;
+    }
+
+    isAddingUnit.value = false;
+
+    toast.add({
+      title: `Ед. измерения "${unit}" успешно добавлена`,
+    });
   }
-  newUnit.value = '';
-  isAddingUnit.value = false;
+  catch (err) {
+    let errorMessage = 'Неизвестная ошибка';
+
+    if (err instanceof Error) {
+      errorMessage = err.message;
+    }
+    else if (typeof err === 'string') {
+      errorMessage = err;
+    }
+    else if (err && typeof err === 'object' && 'message' in err) {
+      errorMessage = (err as { message: string }).message;
+    }
+
+    toast.add({
+      title: `Ошибка`,
+      description: errorMessage,
+      color: 'error',
+    });
+    return;
+  }
+  finally {
+    newUnit.value = '';
+  }
 };
 
 const confirmAddUnit = async () => {
@@ -143,189 +159,304 @@ const editUnit = async (unit: HabitUnit) => {
 };
 
 const confirmEditUnit = async () => {
-  if (!editingUnit.value) return;
+  if (!editingUnit.value) {
+    toast.add({
+      title: 'Ошибка редактирования ед. измерения',
+      description: 'Название не должно быть пустым',
+      color: 'error',
+    });
+    return;
+  }
 
-  await habitsStore.updateUnit(editingUnit.value.id, newUnit.value);
+  try {
+    await habitsStore.updateUnit(editingUnit.value.id, newUnit.value);
 
-  editingUnit.value = null;
-  newUnit.value = '';
-  modalState.edit = false;
+    editingUnit.value = null;
+    newUnit.value = '';
+    modalState.edit = false;
+  }
+  catch (err) {
+    let errorMessage = 'Неизвестная ошибка';
+
+    if (err instanceof Error) {
+      errorMessage = err.message;
+    }
+    else if (typeof err === 'string') {
+      errorMessage = err;
+    }
+    else if (err && typeof err === 'object' && 'message' in err) {
+      errorMessage = (err as { message: string }).message;
+    }
+
+    toast.add({
+      title: 'Ошибка редактирования ед. измерения',
+      description: errorMessage,
+      color: 'error',
+    });
+  }
 };
 
-const confirmDeleteUnit = async (id: number) => {
-  form.value.unitId = undefined;
-  await habitsStore.deleteUnit(id);
+const isDeleteAlertOpen = ref(false);
+const unitToDeleteId = ref<number | null>(null);
+
+const confirmDeleteUnit = async () => {
+  if (!unitToDeleteId.value) return;
+
+  try {
+    await habitsStore.deleteUnit(unitToDeleteId.value);
+
+    toast.add({
+      title: 'Единица успешно удалена',
+      color: 'success',
+    });
+
+    formState.unitId = undefined;
+  }
+  catch (err) {
+    let errorMessage = 'Неизвестная ошибка';
+
+    if (err instanceof Error) {
+      errorMessage = err.message;
+    }
+    else if (typeof err === 'string') {
+      errorMessage = err;
+    }
+    else if (err && typeof err === 'object' && 'message' in err) {
+      errorMessage = (err as { message: string }).message;
+    }
+
+    toast.add({
+      title: 'Невозможно удалить единицу',
+      description: errorMessage,
+      color: 'warning',
+    });
+  }
+  finally {
+    isDeleteAlertOpen.value = false;
+  }
+};
+
+const cancelDeleteUnit = async () => {
+  isDeleteAlertOpen.value = false;
+  unitToDeleteId.value = null;
+};
+
+const handleDeleteUnit = async (id: number) => {
+  unitToDeleteId.value = id;
+  isDeleteAlertOpen.value = true;
 };
 </script>
 
 <template>
   <div>
-    <form
+    <UForm
+      :schema="formSchema"
+      :state="formState"
       class="space-y-4"
-      @submit.prevent="handleSubmit"
+      @submit="onSubmit"
     >
-      <div>
-        <label class="block text-sm font-medium mb-1">
-          Название привычки <span class="text-red-500">*</span>
-        </label>
+      <UFormField
+        label="Название привычки"
+        name="name"
+        required
+      >
         <UInput
-          v-model.trim="form.name"
+          v-model.trim="formState.name"
           :disabled="loading"
           class="w-full"
         />
-      </div>
+      </UFormField>
 
-      <div>
-        <label class="block text-sm font-medium mb-1">
-          Тип отслеживания <span class="text-red-500">*</span>
-        </label>
+      <UFormField
+        label="Тип отслеживания"
+        name="type"
+        required
+      >
         <USelect
-          v-model="form.type"
+          v-model="formState.type"
           :items="typeOptions"
           placeholder="Выберите тип"
           :disabled="loading"
           class="w-full"
         />
-      </div>
+      </UFormField>
 
       <div v-if="isNumeric">
-        <label class="block text-sm font-medium mb-1">
-          Целевое значение <span class="text-red-500">*</span>
-        </label>
-        <UInput
-          v-model.number="form.target"
-          type="number"
-          min="1"
-          placeholder="10000"
-          :disabled="loading"
-          class="w-full"
-        />
-
-        <label class="block text-sm font-medium mb-1">
-          Единица измерения <span class="text-red-500">*</span>
-        </label>
-
-        <div class="flex gap-2">
-          <USelect
-            v-model="form.unitId"
-            :items="habitsStore.units.map(u => ({
-              label: u.name,
-              value: u.id,
-            }))"
-            :placeholder="(() =>
-              habitsStore.units.length > 0
-                ? 'Выберите единицу'
-                : 'Единиц нет. Добавьте'
-            )()"
-            :disabled="habitsStore.units.length === 0"
+        <UFormField
+          label="Целевое значениe"
+          name="target"
+          required
+        >
+          <UInputNumber
+            v-model.number="formState.target"
+            :min="1"
+            :disabled="loading"
             class="w-full"
           />
+        </UFormField>
 
-          <UPopover v-model:open="modalState.add">
-            <UButton
-              icon="i-lucide-plus"
-              variant="soft"
-              @click="() => {
-                isAddingUnit = true;
-                modalState.add = true;
-              }"
-            />
-
-            <template #content>
-              <div class="flex gap-1">
-                <UInput
-                  v-model.trim="newUnit"
-                  class="flex-1"
-                  placeholder="Например: км, мин, шт"
-                />
-
-                <UButton
-                  icon="i-lucide-check"
-                  color="primary"
-                  @click="confirmAddUnit"
-                />
-              </div>
-            </template>
-          </UPopover>
-
-          <USlideover
-            v-model:open="modalState.unitTable"
-            title="Единицы измерения"
-            :close="{
-              color: 'primary',
-              variant: 'outline',
-              class: 'rounded-full',
-            }"
+        <UFormField
+          label="Единица измерения"
+          name="unitId"
+          :error="!formState.unitId ? 'Выберите единицу' : undefined"
+          required
+        >
+          <div
+            class="flex gap-2"
           >
-            <UButton
-              icon="i-lucide-list"
-              variant="soft"
-              @click="() => {
-                modalState.unitTable = true;
-              }"
+            <USelect
+              v-model="formState.unitId"
+              :items="habitsStore.units.map(u => ({
+                label: u.name,
+                value: u.id,
+              }))"
+              :placeholder="
+                habitsStore.units.length > 0
+                  ? 'Выберите единицу'
+                  : 'Единиц нет. Добавьте'
+              "
+              :disabled="habitsStore.units.length === 0"
+              class="w-full"
             />
 
-            <template #body>
-              <div class="flex flex-col gap-2 p-1 min-w-40">
-                <div
-                  v-for="unit in habitsStore.units"
-                  :key="unit.id"
-                  class="flex gap-1 p-1 items-center justify-between border"
-                >
-                  <span class="ml-2">{{ unit.name }}</span>
+            <UPopover v-model:open="modalState.add">
+              <UButton
+                icon="i-lucide-plus"
+                variant="soft"
+                @click="() => {
+                  isAddingUnit = true;
+                  modalState.add = true;
+                }"
+              />
 
-                  <div class="flex gap-2">
-                    <UPopover
-                      :open="modalState.edit && editingUnit?.id === unit.id"
-                      @update:open="(v) => {
-                        if (!v) editingUnit = null
-                        modalState.edit = v
-                      }"
-                    >
+              <template #content>
+                <div class="flex gap-1">
+                  <UInput
+                    v-model.trim="newUnit"
+                    class="flex-1"
+                    placeholder="Например: км, мин, шт"
+                  />
+
+                  <UButton
+                    icon="i-lucide-check"
+                    color="primary"
+                    @click="confirmAddUnit"
+                  />
+                </div>
+              </template>
+            </UPopover>
+
+            <USlideover
+              v-model:open="modalState.unitTable"
+              title="Единицы измерения"
+              description=" "
+              :close="{
+                color: 'primary',
+                variant: 'outline',
+                class: 'rounded-full',
+              }"
+            >
+              <UButton
+                icon="i-lucide-list"
+                variant="soft"
+                @click="() => {
+                  modalState.unitTable = true;
+                }"
+              />
+
+              <template #body>
+                <div
+                  v-if="habitsStore.units.length > 0"
+                  class="flex flex-col gap-2 p-1 min-w-40"
+                >
+                  <div
+                    v-for="unit in habitsStore.units"
+                    :key="unit.id"
+                    class="flex gap-1 p-1 items-center justify-between border"
+                  >
+                    <span class="ml-2">{{ unit.name }}</span>
+
+                    <div class="flex gap-2">
+                      <UPopover
+                        :open="modalState.edit && editingUnit?.id === unit.id"
+                        @update:open="(y) => {
+                          if (!y) editingUnit = null
+                          modalState.edit = y
+                        }"
+                      >
+                        <UButton
+                          icon="i-lucide-edit-2"
+                          size="sm"
+                          variant="soft"
+                          @click="editUnit(unit)"
+                        />
+
+                        <template #content>
+                          <div class="flex gap-2 items-center min-w-48">
+                            <UInput
+                              v-model.trim="newUnit"
+                              placeholder="Название единицы"
+                              class="flex-1"
+                            />
+
+                            <UButton
+                              icon="i-lucide-check"
+                              size="sm"
+                              color="primary"
+                              @click="confirmEditUnit"
+                            />
+                          </div>
+                        </template>
+                      </UPopover>
+
                       <UButton
-                        icon="i-lucide-edit-2"
+                        icon="i-lucide-trash"
                         size="sm"
                         variant="soft"
-                        @click="editUnit(unit)"
+                        color="error"
+                        @click="handleDeleteUnit(unit.id)"
                       />
 
-                      <template #content>
-                        <div class="flex gap-2 items-center min-w-48">
-                          <UInput
-                            v-model.trim="newUnit"
-                            placeholder="Название единицы"
-                            class="flex-1"
-                          />
-
-                          <UButton
-                            icon="i-lucide-check"
-                            size="sm"
-                            color="primary"
-                            @click="confirmEditUnit"
-                          />
-                        </div>
-                      </template>
-                    </UPopover>
-
-                    <UButton
-                      icon="i-lucide-trash"
-                      size="sm"
-                      variant="soft"
-                      color="error"
-                      @click="confirmDeleteUnit(unit.id)"
-                    />
+                      <UAlert
+                        v-if="isDeleteAlertOpen"
+                        title="ВНИМАНИЕ!"
+                        description="Вы собираетесь удалить единицу. Подтвердите действие!"
+                        color="error"
+                        variant="subtle"
+                        orientation="horizontal"
+                        class="fixed bottom-14 left-0 backdrop-blur-xl"
+                        :actions="[
+                          {
+                            label: 'Удалить',
+                            color: 'error',
+                            variant: 'subtle',
+                            onClick: () => confirmDeleteUnit(),
+                          },
+                          {
+                            label: 'Отмена',
+                            color: 'neutral',
+                            variant: 'subtle',
+                            onClick: () => cancelDeleteUnit(),
+                          },
+                        ]"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </template>
-          </USlideover>
-        </div>
+                <div v-else>
+                  Пусто
+                </div>
+              </template>
+            </USlideover>
+          </div>
+        </UFormField>
       </div>
 
-      <div>
-        <label class="block text-sm font-medium mb-1">
-          Цвет
-        </label>
+      <UFormField
+        label="Цвет"
+        name="color"
+        required
+      >
         <UPopover>
           <UButton
             color="neutral"
@@ -335,12 +466,12 @@ const confirmDeleteUnit = async (id: number) => {
 
           <template #content>
             <UColorPicker
-              v-model="form.color"
+              v-model="formState.color"
               mode="click"
             />
           </template>
         </UPopover>
-      </div>
+      </UFormField>
 
       <div class="flex gap-3 pt-4">
         <UButton
@@ -360,7 +491,7 @@ const confirmDeleteUnit = async (id: number) => {
           Отмена
         </UButton>
       </div>
-    </form>
+    </UForm>
   </div>
 </template>
 

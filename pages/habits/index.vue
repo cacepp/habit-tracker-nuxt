@@ -37,8 +37,25 @@ const handleUpdated = () => {
   fetchHabits();
 };
 
-const handleDelete = async (id: number) => {
-  await deleteHabit(id);
+const isDeleteAlertOpen = ref(false);
+const habitToDeleteId = ref<number | null>(null);
+
+const confirmDelete = async () => {
+  if (!habitToDeleteId.value) return;
+
+  await deleteHabit(habitToDeleteId.value);
+  habitToDeleteId.value = null;
+  isDeleteAlertOpen.value = false;
+};
+
+const cancelDelete = () => {
+  habitToDeleteId.value = null;
+  isDeleteAlertOpen.value = false;
+};
+
+const handleDelete = (id: number) => {
+  habitToDeleteId.value = id;
+  isDeleteAlertOpen.value = true;
 };
 
 onMounted(() => {
@@ -56,6 +73,7 @@ onMounted(() => {
         size="lg"
         color="primary"
         icon="i-heroicons-plus"
+        class="mb-2"
         @click="isCreateModalOpen = true"
       >
         Создать привычку
@@ -97,42 +115,57 @@ onMounted(() => {
         </TransitionGroup>
       </div>
 
-      <UModal v-model:open="isCreateModalOpen">
-        <template #content>
-          <div class="p-4">
-            <div class="flex items-center justify-between mb-6">
-              <h2 class="text-2xl font-bold">
-                Новая привычка
-              </h2>
-            </div>
-
-            <HabitForm
-              @created="handleCreated"
-              @close="isCreateModalOpen = false"
-            />
-          </div>
+      <UModal
+        v-model:open="isCreateModalOpen"
+        title="Новая привычка"
+        description=" "
+      >
+        <template #body>
+          <HabitForm
+            @created="handleCreated"
+            @close="isCreateModalOpen = false"
+          />
         </template>
       </UModal>
 
-      <UModal v-model:open="isEditModalOpen">
-        <template #content>
-          <div class="p-4">
-            <div class="flex items-center justify-between mb-6">
-              <h2 class="text-2xl font-bold">
-                Редактировать привычку
-              </h2>
-            </div>
-
-            <HabitForm
-              v-if="editHabit"
-              :habit="editHabit"
-              @updated="handleUpdated"
-              @close="isEditModalOpen = false"
-            />
-          </div>
+      <UModal
+        v-model:open="isEditModalOpen"
+        title="Редактировать привычку"
+        description=" "
+      >
+        <template #body>
+          <HabitForm
+            v-if="editHabit"
+            :habit="editHabit"
+            @updated="handleUpdated"
+            @close="isEditModalOpen = false"
+          />
         </template>
       </UModal>
     </div>
+    <UAlert
+      v-if="isDeleteAlertOpen"
+      title="ВНИМАНИЕ!"
+      description="Вы собираетесь удалить привычку. Подтвердите действие!"
+      color="error"
+      variant="subtle"
+      orientation="horizontal"
+      class="fixed top-14 backdrop-blur-xl"
+      :actions="[
+        {
+          label: 'Удалить',
+          color: 'error',
+          variant: 'subtle',
+          onClick: confirmDelete,
+        },
+        {
+          label: 'Отмена',
+          color: 'neutral',
+          variant: 'subtle',
+          onClick: cancelDelete,
+        },
+      ]"
+    />
   </div>
 </template>
 
