@@ -53,6 +53,10 @@ defineEmits<{
           <span>Создано</span>
           <span class="font-medium">{{ formatDateTime(habit.createdAt) }}</span>
         </div>
+
+        <span v-if="habit.icon">
+          <UIcon :name="habit.icon" />
+        </span>
       </div>
 
       <div class="mt-auto pt-6 flex gap-2">

@@ -15,6 +15,7 @@
     "*.{ts,js,vue}": "eslint --fix"
   },
   "dependencies": {
+    "@iconify-json/lucide": "^1.2.86",
     "@nuxt/eslint": "1.12.1",
     "@nuxt/ui": "3.3.7",
     "@pinia/nuxt": "0.11.3",

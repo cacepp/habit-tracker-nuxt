@@ -12,6 +12,7 @@ export interface Habit {
   target?: number;
   unitId?: number;
   color: string;
+  icon: string;
   createdAt: string;
 }
 
