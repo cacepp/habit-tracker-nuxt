@@ -35,8 +35,10 @@ export default defineNuxtPlugin(() => {
 
     async deleteHabit(id: number) {
       const habits = await this.getHabits();
-      const newHabits = habits.filter(h => h.id !== id);
-      await this.saveHabits(newHabits);
+      await this.saveHabits(habits.filter(h => h.id !== id));
+
+      const entries = await this.getEntries();
+      await this.saveEntries(entries.filter(e => e.habitId !== id));
     },
 
     // ENTRIES

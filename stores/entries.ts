@@ -1,23 +1,21 @@
 import { useIndexedDB } from '~/plugins/indexeddb.client';
-import type { HabitEntry } from '~/types';
+import type { Habit, HabitEntry } from '~/types';
 
 export const useHabitEntriesStore = defineStore('habitEntries', () => {
   const entries = ref<HabitEntry[]>([]);
   const isLoading = ref(false);
-  const error = ref<string | null>(null);
 
   const db = useIndexedDB();
 
   const fetchEntriesByDate = async (date: string) => {
     isLoading.value = true;
-    error.value = null;
 
     try {
       entries.value = await db.getEntriesByDate(date);
     }
     catch (e) {
-      error.value = `Ошибка загрузки: ${e}`;
       entries.value = [];
+      throw new Error(`Ошибка загрузки: ${e}`);
     }
     finally {
       isLoading.value = false;
@@ -31,15 +29,20 @@ export const useHabitEntriesStore = defineStore('habitEntries', () => {
     );
 
     if (existing) {
-      const updated: HabitEntry = {
-        ...existing,
-        ...data,
-      };
+      const index = entries.value.findIndex(e => e.id === existing.id);
+      if (index === -1) return;
 
-      entries.value = entries.value.map(e =>
-        e.id === updated.id ? updated : e,
-      );
-      await db.updateEntry(updated);
+      const prev = { ...entries.value[index] };
+      const updated: HabitEntry = { ...prev, ...data };
+      entries.value[index] = updated;
+
+      try {
+        await db.updateEntry(updated);
+      }
+      catch (e) {
+        entries.value[index] = prev;
+        throw new Error(`Ошибка сохранения: ${e}`);
+      }
     }
     else {
       const newEntry: HabitEntry = {
@@ -47,17 +50,58 @@ export const useHabitEntriesStore = defineStore('habitEntries', () => {
         ...data,
       };
       entries.value.push(newEntry);
-      await db.addEntry(newEntry);
+      try {
+        await db.addEntry(newEntry);
+      }
+      catch (e) {
+        entries.value = entries.value.filter(e => e.id !== newEntry.id);
+        throw new Error(`Ошибка сохранения: ${e}`);
+      }
     }
   };
 
   const deleteEntry = async (id: number) => {
+    const prev = [...entries.value];
     entries.value = entries.value.filter(e => e.id !== id);
-    await db.deleteEntry(id);
+
+    try {
+      await db.deleteEntry(id);
+    }
+    catch (e) {
+      entries.value = prev;
+      throw new Error(`Ошибка удаления: ${e}`);
+    }
+  };
+
+  const entriesMap = computed(() => {
+    const map = new Map<number, HabitEntry>();
+    entries.value.forEach(e => map.set(e.habitId, e));
+    return map;
+  });
+
+  const isHabitCompleted = (habit: Habit, entry?: HabitEntry) => {
+    if (!entry) return false;
+    if (habit.type === 'boolean') return entry.value === true;
+    return typeof entry.value === 'number' && entry.value >= (habit.target ?? 0);
+  };
+
+  const getProgressStats = (habits: Habit[]) => {
+    const total = habits.length;
+
+    const completed = habits.filter(habit =>
+      isHabitCompleted(habit, entriesMap.value.get(habit.id)),
+    ).length;
+
+    return {
+      total,
+      completed,
+      percent: total ? Math.round((completed / total) * 100) : 0,
+    };
   };
 
   return {
-    entries, isLoading, error,
+    entries, isLoading, entriesMap, isHabitCompleted,
     fetchEntriesByDate, upsertEntry, deleteEntry,
+    getProgressStats,
   };
 });

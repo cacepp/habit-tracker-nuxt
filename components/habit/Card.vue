@@ -14,69 +14,73 @@ defineEmits<{
 
 <template>
   <div
-    class="group hover:shadow-lg transition-all duration-200 h-full flex flex-col p-0 rounded-lg overflow-hidden max-w-80 border-2"
-    :style="{ borderColor: habit.color }"
+    class="group hover:shadow-xl transition-shadow duration-300 flex flex-col p-4 rounded-xl border-2 "
+    :style="{
+      borderColor: habit.color,
+      background: `linear-gradient(135deg, ${habit.color}20 0%, ${habit.color}10 100%)`,
+    }"
   >
-    <div class="flex-1 p-4 flex flex-col">
-      <div>
-        <div class="flex items-start justify-between mb-4">
-          <div>
-            <h3 class="font-semibold text-lg mb-1 line-clamp-2">
-              {{ habit.name }}
-            </h3>
-            <UBadge
-              :label="isBooleanHabit(habit) ? 'Да/Нет' : `${unitName ?? ''}`"
-              variant="soft"
-              size="sm"
-              color="neutral"
-            />
-          </div>
-          <div
-            class="w-4 h-4 rounded-full border-2 shadow-sm shrink-0"
-            :style="{ backgroundColor: habit.color }"
-          />
-        </div>
-
-        <div
-          v-if="isNumericHabit(habit)"
-          class="mb-6 p-3 rounded-lg"
-        >
-          <div class="text-sm font-medium">
-            Цель
-          </div>
-          <div class="text-2xl font-bold">
-            {{ habit.target }} {{ unitName }}
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between text-sm">
-          <span>Создано</span>
-          <span class="font-medium">{{ formatDateTime(habit.createdAt) }}</span>
-        </div>
-
+    <div class="flex justify-between items-start mb-4">
+      <div class="flex flex-col gap-1">
+        <h3 class="font-semibold text-lg line-clamp-2 text-gray-800 dark:text-gray-100 truncate max-w-40">
+          {{ habit.name }}
+        </h3>
+        <UBadge
+          :label="isBooleanHabit(habit) ? 'Да/Нет' : unitName ?? ''"
+          variant="soft"
+          size="md"
+          :color="isBooleanHabit(habit) ? 'success' : 'primary'"
+        />
+      </div>
+      <div class="flex gap-2">
         <span v-if="habit.icon">
-          <UIcon :name="habit.icon" />
+          <UIcon
+            :name="habit.icon"
+            class="text-xl text-gray-600 dark:text-gray-300"
+          />
         </span>
+        <div
+          class="w-5 h-5 rounded-full border-2 shadow-sm ring-1 ring-gray-200 dark:ring-gray-700"
+          :style="{ backgroundColor: habit.color }"
+        />
       </div>
+    </div>
 
-      <div class="mt-auto pt-6 flex gap-2">
-        <UButton
-          size="sm"
-          variant="solid"
-          color="secondary"
-          block
-          icon="i-heroicons-pencil"
-          @click="$emit('edit', habit)"
-        />
-        <UButton
-          size="sm"
-          variant="ghost"
-          color="neutral"
-          block
-          icon="i-heroicons-trash"
-          @click="$emit('delete', habit.id)"
-        />
-      </div>
+    <div
+      v-if="isNumericHabit(habit)"
+      class="mb-4 p-3 rounded-lg flex flex-col items-start"
+      :style="{
+        background: `linear-gradient(90deg, ${habit.color}20 0%, ${habit.color}10 100%)`,
+      }"
+    >
+      <span class="text-sm text-gray-500 dark:text-gray-400">Цель</span>
+      <span class="text-2xl font-bold text-gray-800 dark:text-gray-100">
+        {{ habit.target }} {{ unitName }}
+      </span>
+    </div>
+
+    <div class="text-sm text-gray-500 dark:text-gray-400 mb-4 flex justify-between">
+      <span>Создано</span>
+      <span class="font-medium text-gray-700 dark:text-gray-300">
+        {{ formatDateTime(habit.createdAt) }}
+      </span>
+    </div>
+
+    <div class="flex gap-2 mt-auto">
+      <UButton
+        size="sm"
+        variant="solid"
+        color="secondary"
+        icon="i-heroicons-pencil"
+        @click="$emit('edit', habit)"
+      />
+      <UButton
+        size="sm"
+        variant="ghost"
+        color="error"
+        icon="i-heroicons-trash"
+        @click="$emit('delete', habit.id)"
+      />
     </div>
   </div>
 </template>

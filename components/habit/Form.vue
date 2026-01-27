@@ -14,8 +14,9 @@ const emit = defineEmits<{
 }>();
 
 const habitsStore = useHabitsStore();
-const loading = ref<boolean>(false);
+const toast = useToast();
 
+const loading = ref<boolean>(false);
 const formState = reactive<HabitFormSchema>({
   name: '',
   type: 'boolean',
@@ -27,8 +28,8 @@ const formState = reactive<HabitFormSchema>({
 
 const newUnit = ref<string>('');
 const editingUnit = ref<HabitUnit | null>(null);
-
 const isAddingUnit = ref(false);
+
 const modalState = reactive({
   add: false,
   edit: false,
@@ -36,7 +37,15 @@ const modalState = reactive({
   icon: false,
 });
 
-const toast = useToast();
+const isDeleteAlertOpen = ref(false);
+const unitToDeleteId = ref<number | null>(null);
+
+const typeOptions = [
+  { label: 'Да/Нет', value: 'boolean' as const },
+  { label: 'Числовое значение', value: 'numeric' as const },
+];
+
+const isNumeric = computed(() => formState.type === 'numeric');
 
 const resetForm = () => {
   formState.name = '';
@@ -46,13 +55,6 @@ const resetForm = () => {
   formState.color = '#2eb648';
   formState.icon = 'i-lucide-calendar-check';
 };
-
-const typeOptions = [
-  { label: 'Да/Нет', value: 'boolean' as const },
-  { label: 'Числовое значение', value: 'numeric' as const },
-];
-
-const isNumeric = computed(() => formState.type === 'numeric');
 
 watch(
   () => props.habit,
@@ -74,33 +76,34 @@ watch(
 
 const onSubmit = async (event: FormSubmitEvent<HabitFormSchema>) => {
   loading.value = true;
-
   const data = event.data;
 
-  try {
-    const habitData: Omit<Habit, 'id' | 'createdAt'> = {
-      name: data.name,
-      type: data.type,
-      color: data.color,
-      icon: data.icon,
-      ...(data.type === 'numeric' && {
-        target: data.target!,
-        unitId: data.unitId!,
-      }),
-    };
+  const habitData: Omit<Habit, 'id' | 'createdAt'> = {
+    name: data.name,
+    type: data.type,
+    color: data.color,
+    icon: data.icon,
+    ...(data.type === 'numeric' && {
+      target: data.target!,
+      unitId: data.unitId!,
+    }),
+  };
 
+  try {
     if (props.habit) {
       await habitsStore.updateHabit({
         ...habitData,
         id: props.habit.id,
         createdAt: props.habit.createdAt,
       });
+      toast.add({ title: 'Привычка обновлена', color: 'success' });
       emit('updated');
     }
     else {
       await habitsStore.addHabit(habitData);
-      emit('created');
+      toast.add({ title: 'Привычка создана', color: 'success' });
       resetForm();
+      emit('created');
     }
   }
   finally {
@@ -109,52 +112,42 @@ const onSubmit = async (event: FormSubmitEvent<HabitFormSchema>) => {
 };
 
 const addNewUnit = async () => {
+  if (!newUnit.value) {
+    toast.add({
+      title: 'Ошибка добавления ед. измерения',
+      description: 'Название не должно быть пустым',
+      color: 'error',
+    });
+    return;
+  }
   const unit = newUnit.value;
 
   try {
     await habitsStore.addUnit(unit);
-
     const added = habitsStore.units.find(u => u.name === unit);
-    if (added) {
-      formState.unitId = added.id;
-    }
-
-    isAddingUnit.value = false;
+    if (added) formState.unitId = added.id;
 
     toast.add({
       title: `Ед. измерения "${unit}" успешно добавлена`,
     });
+    modalState.add = false;
   }
   catch (err) {
-    let errorMessage = 'Неизвестная ошибка';
-
-    if (err instanceof Error) {
-      errorMessage = err.message;
-    }
-    else if (typeof err === 'string') {
-      errorMessage = err;
-    }
-    else if (err && typeof err === 'object' && 'message' in err) {
-      errorMessage = (err as { message: string }).message;
-    }
-
     toast.add({
       title: `Ошибка`,
-      description: errorMessage,
+      description: getErrorMessage(err),
       color: 'error',
     });
     return;
   }
   finally {
     newUnit.value = '';
+    isAddingUnit.value = false;
   }
 };
 
 const confirmAddUnit = async () => {
-  if (!newUnit.value) return;
-
   await addNewUnit();
-  modalState.add = false;
 };
 
 const editUnit = async (unit: HabitUnit) => {
@@ -175,34 +168,23 @@ const confirmEditUnit = async () => {
 
   try {
     await habitsStore.updateUnit(editingUnit.value.id, newUnit.value);
-
+    toast.add({ title: 'Ед. измерения обновлена', color: 'success' });
     editingUnit.value = null;
-    newUnit.value = '';
     modalState.edit = false;
   }
   catch (err) {
-    let errorMessage = 'Неизвестная ошибка';
-
-    if (err instanceof Error) {
-      errorMessage = err.message;
-    }
-    else if (typeof err === 'string') {
-      errorMessage = err;
-    }
-    else if (err && typeof err === 'object' && 'message' in err) {
-      errorMessage = (err as { message: string }).message;
-    }
-
     toast.add({
       title: 'Ошибка редактирования ед. измерения',
-      description: errorMessage,
+      description: getErrorMessage(err),
       color: 'error',
     });
   }
 };
 
-const isDeleteAlertOpen = ref(false);
-const unitToDeleteId = ref<number | null>(null);
+const handleDeleteUnit = async (id: number) => {
+  unitToDeleteId.value = id;
+  isDeleteAlertOpen.value = true;
+};
 
 const confirmDeleteUnit = async () => {
   if (!unitToDeleteId.value) return;
@@ -218,21 +200,9 @@ const confirmDeleteUnit = async () => {
     formState.unitId = undefined;
   }
   catch (err) {
-    let errorMessage = 'Неизвестная ошибка';
-
-    if (err instanceof Error) {
-      errorMessage = err.message;
-    }
-    else if (typeof err === 'string') {
-      errorMessage = err;
-    }
-    else if (err && typeof err === 'object' && 'message' in err) {
-      errorMessage = (err as { message: string }).message;
-    }
-
     toast.add({
       title: 'Невозможно удалить единицу',
-      description: errorMessage,
+      description: getErrorMessage(err),
       color: 'warning',
     });
   }
@@ -244,11 +214,6 @@ const confirmDeleteUnit = async () => {
 const cancelDeleteUnit = async () => {
   isDeleteAlertOpen.value = false;
   unitToDeleteId.value = null;
-};
-
-const handleDeleteUnit = async (id: number) => {
-  unitToDeleteId.value = id;
-  isDeleteAlertOpen.value = true;
 };
 </script>
 
@@ -422,29 +387,34 @@ const handleDeleteUnit = async (id: number) => {
                         @click="handleDeleteUnit(unit.id)"
                       />
 
-                      <UAlert
-                        v-if="isDeleteAlertOpen"
-                        title="ВНИМАНИЕ!"
-                        description="Вы собираетесь удалить единицу. Подтвердите действие!"
-                        color="error"
-                        variant="subtle"
-                        orientation="horizontal"
-                        class="fixed bottom-14 left-0 backdrop-blur-xl"
-                        :actions="[
-                          {
-                            label: 'Удалить',
-                            color: 'error',
-                            variant: 'subtle',
-                            onClick: () => confirmDeleteUnit(),
-                          },
-                          {
-                            label: 'Отмена',
-                            color: 'neutral',
-                            variant: 'subtle',
-                            onClick: () => cancelDeleteUnit(),
-                          },
-                        ]"
-                      />
+                      <Transition
+                        name="toast-slide"
+                        appear
+                      >
+                        <UAlert
+                          v-if="isDeleteAlertOpen"
+                          title="ВНИМАНИЕ!"
+                          description="Вы собираетесь удалить единицу. Подтвердите действие!"
+                          color="error"
+                          variant="subtle"
+                          orientation="horizontal"
+                          class="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md p-4 rounded-xl backdrop-blur-xl shadow-xl z-100 flex flex-col sm:flex-row justify-between items-center gap-3"
+                          :actions="[
+                            {
+                              label: 'Удалить',
+                              color: 'error',
+                              variant: 'subtle',
+                              onClick: () => confirmDeleteUnit(),
+                            },
+                            {
+                              label: 'Отмена',
+                              color: 'neutral',
+                              variant: 'subtle',
+                              onClick: () => cancelDeleteUnit(),
+                            },
+                          ]"
+                        />
+                      </Transition>
                     </div>
                   </div>
                 </div>
@@ -524,4 +494,27 @@ const handleDeleteUnit = async (id: number) => {
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.toast-slide-enter-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.toast-slide-leave-active {
+  transition: all 0.3s ease-in;
+}
+.toast-slide-enter-from {
+  opacity: 0;
+  transform: translateY(40px) scale(0.95);
+}
+.toast-slide-enter-to {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.toast-slide-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.toast-slide-leave-to {
+  opacity: 0;
+  transform: translateY(40px) scale(0.95);
+}
+</style>

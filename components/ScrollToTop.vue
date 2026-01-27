@@ -1,13 +1,24 @@
 <script setup lang="ts">
-import { useWindowScroll } from '@vueuse/core';
+import { useEventListener } from '@vueuse/core';
 
 const isVisible = ref(false);
-const { y: scrollY } = useWindowScroll();
-watch(scrollY, (newY) => {
-  isVisible.value = newY > 300;
+const scrollContainer = ref<HTMLElement | null>(null);
+
+onMounted(() => {
+  scrollContainer.value = document.getElementById('page-scroll');
+
+  if (!scrollContainer.value) return;
+
+  useEventListener(scrollContainer.value, 'scroll', () => {
+    isVisible.value = scrollContainer.value!.scrollTop > 300;
+  });
 });
+
 const scrollToTop = () => {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  scrollContainer.value?.scrollTo({
+    top: 0,
+    behavior: 'smooth',
+  });
 };
 </script>
 

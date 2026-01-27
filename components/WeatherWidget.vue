@@ -26,7 +26,7 @@ const windDirection = (deg?: number): string => {
       body: 'bg-gradient-to-br from-blue-500/20 via-indigo-500/20 to-purple-600/30 backdrop-blur-sm',
       root: 'rounded-2xl',
     }"
-    class="p-0"
+    class="p-0 select-none"
   >
     <div class="text-center">
       <img

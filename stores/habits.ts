@@ -4,21 +4,18 @@ import { useIndexedDB } from '~/plugins/indexeddb.client';
 export const useHabitsStore = defineStore('habits', () => {
   const habits = ref<Habit[]>([]);
   const isLoading = ref<boolean>(true);
-  const error = ref<string | null>(null);
   const units = ref<HabitUnit[]>([]);
 
   const db = useIndexedDB();
 
   const fetchHabits = async () => {
     isLoading.value = true;
-    error.value = null;
     try {
       habits.value = await db.getHabits();
     }
     catch (e) {
-      error.value = `Ошибка загрузки: ${e}`;
-      console.log(error.value);
       habits.value = [];
+      throw new Error(`Ошибка загрузки привычек: ${e}`);
     }
     finally {
       isLoading.value = false;
@@ -39,28 +36,51 @@ export const useHabitsStore = defineStore('habits', () => {
     }
     catch (e) {
       habits.value = habits.value.filter(h => h.id !== newHabit.id);
-      throw e;
+      throw new Error(`Ошибка добавления привычки: ${e}`);
     }
   };
 
   const updateHabit = async (habit: Habit) => {
     const index = habits.value.findIndex(h => h.id === habit.id);
-    if (index !== -1) habits.value[index] = habit;
-    await db.updateHabit(habit);
+    if (index === -1) return;
+
+    const prev = { ...habits.value[index] };
+    habits.value[index] = habit;
+
+    try {
+      await db.updateHabit(habit);
+    }
+    catch (e) {
+      habits.value[index] = prev;
+      throw new Error(`Ошибка обновления привычки: ${e}`);
+    }
   };
 
   const deleteHabit = async (id: number) => {
+    const prev = [...habits.value];
     habits.value = habits.value.filter(h => h.id !== id);
-    await db.deleteHabit(id);
+
+    try {
+      await db.deleteHabit(id);
+    }
+    catch (e) {
+      habits.value = prev;
+      throw new Error(`Ошибка удаления привычки: ${e}`);
+    }
   };
 
   const fetchUnits = async () => {
-    units.value = await db.getUnits();
+    try {
+      units.value = await db.getUnits();
+    }
+    catch (e) {
+      units.value = [];
+      throw new Error(`Ошибка удаления единиц: ${e}`);
+    }
   };
 
   const addUnit = async (name: string) => {
     if (units.value.some(u => u.name.toLowerCase() === name.toLowerCase())) {
-      error.value = 'Ошибка: единица измерения с таким именем уже существует';
       throw new Error(`Единица измерения с таким именем ("${name}") уже существует`);
     }
     const newUnit: HabitUnit = { id: Date.now(), name };
@@ -70,8 +90,10 @@ export const useHabitsStore = defineStore('habits', () => {
 
   const updateUnit = async (id: number, name: string) => {
     if (units.value.some(u => u.name.toLowerCase() === name.toLowerCase() && u.id !== id)) {
-      error.value = 'Ошибка: единица измерения с таким именем уже существует';
       throw new Error(`Единица измерения с таким именем ("${name}") уже существует`);
+    }
+    else if (name.length === 0) {
+      throw new Error(`Название не должно быть пустым`);
     }
 
     const unit = units.value.find(u => u.id === id);
@@ -84,7 +106,6 @@ export const useHabitsStore = defineStore('habits', () => {
     const count = habits.value.filter(h => h.unitId === id).length;
 
     if (count > 0) {
-      error.value = `Привычек с такой единицей: ${count}`;
       throw new Error(`Привычек с такой единицей: ${count}`);
     }
 
@@ -92,9 +113,27 @@ export const useHabitsStore = defineStore('habits', () => {
     await db.saveUnits(units.value.map(u => ({ ...u })));
   };
 
+  const unitsMap = computed(() => {
+    const map = new Map<number, string>();
+    units.value.forEach(u => map.set(u.id, u.name));
+    return map;
+  });
+
+  const habitsWithUnits = computed(() =>
+    habits.value.map(h => ({
+      ...h,
+      unitName: h.unitId ? unitsMap.value.get(h.unitId) : undefined,
+    })),
+  );
+
+  const init = async () => {
+    await Promise.all([fetchHabits(), fetchUnits()]);
+  };
+
   return {
-    habits, error, isLoading, units,
+    habits, isLoading, units, habitsWithUnits,
     fetchHabits, addHabit, updateHabit, deleteHabit,
     fetchUnits, addUnit, updateUnit, deleteUnit,
+    init,
   };
 });
