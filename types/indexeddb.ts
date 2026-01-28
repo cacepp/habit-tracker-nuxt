@@ -8,8 +8,9 @@ export interface IndexedDBClient {
   deleteHabit(id: number): Promise<void>;
 
   getEntries(): Promise<HabitEntry[]>;
-  saveEntries(entries: HabitEntry[]): Promise<void>;
   getEntriesByDate(date: string): Promise<HabitEntry[]>;
+  getEntriesInRange(start: string, end: string): Promise<HabitEntry[]>;
+  saveEntries(entries: HabitEntry[]): Promise<void>;
   addEntry(entry: HabitEntry): Promise<void>;
   updateEntry(entry: HabitEntry): Promise<void>;
   deleteEntry(id: number): Promise<void>;

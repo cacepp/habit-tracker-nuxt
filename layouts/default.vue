@@ -22,6 +22,14 @@ const items = ref<NavigationMenuItem[]>([
     },
   },
   {
+    label: 'Статистика',
+    icon: 'i-heroicons-chart-bar-square',
+    to: '/stats',
+    onSelect: () => {
+      isSidebarOpen.value = false;
+    },
+  },
+  {
     label: 'GitHub',
     icon: 'i-simple-icons-github',
     to: 'https://github.com/cacepp/habit-tracker-nuxt',
