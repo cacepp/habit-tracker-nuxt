@@ -7,25 +7,17 @@
 ## Используемый стек технологий:
 
 - Vue 3 + Nuxt 3
-
 - TypeScript
-
 - Pinia
-
 - Nuxt UI
-
 - IndexedDB
-
 - Chart.js + vue-chartjs
-
 - VueUse
 
 Все данные сохраняются локально в браузере через IndexedDB:
 
 - Привычки (ключ "habits")
-
 - Записи выполнения (ключ "entries")
-
 - Единицы измерения (ключ "units")
 
 ## Запуск проекта
