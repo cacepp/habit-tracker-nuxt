@@ -1,10 +1,36 @@
-# Nuxt Minimal Starter
+# Habit Tracker (Nuxt 3)
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Веб-приложение для отслеживания ежедневных привычек с аналитикой прогресса.
 
-## Setup
+Пользователь может создавать привычки, отмечать их выполнение каждый день и анализировать свою статистику.
 
-Make sure to install dependencies:
+## Используемый стек технологий:
+
+- Vue 3 + Nuxt 3
+
+- TypeScript
+
+- Pinia
+
+- Nuxt UI
+
+- IndexedDB
+
+- Chart.js + vue-chartjs
+
+- VueUse
+
+Все данные сохраняются локально в браузере через IndexedDB:
+
+- Привычки (ключ "habits")
+
+- Записи выполнения (ключ "entries")
+
+- Единицы измерения (ключ "units")
+
+## Запуск проекта
+
+### Склонировать репозиторий и установить зависимости:
 
 ```bash
 # npm
@@ -20,9 +46,7 @@ yarn install
 bun install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
+### Запустить локальный dev-сервер:
 
 ```bash
 # npm
@@ -35,41 +59,11 @@ pnpm dev
 yarn dev
 
 # bun
-bun run dev
+bun --bun run dev
 ```
 
-## Production
+### После запуска приложение будет доступно по адресу:
 
-Build the application for production:
-
-```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
 ```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
+http://localhost:3000
 ```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
