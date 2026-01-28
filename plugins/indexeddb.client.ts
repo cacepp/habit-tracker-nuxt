@@ -1,5 +1,5 @@
 import { get, set } from 'idb-keyval';
-import type { Habit, HabitEntry, HabitUnit } from '~/types';
+import type { Habit, HabitEntry, HabitUnit, IndexedDBClient } from '~/types';
 
 enum DBKeys {
   HABITS = 'habits',
@@ -8,7 +8,7 @@ enum DBKeys {
 }
 
 export default defineNuxtPlugin(() => {
-  const indexedDB = {
+  const indexedDB: IndexedDBClient = {
     // HABITS
     async getHabits() {
       const habits = await get<Habit[]>(DBKeys.HABITS);
@@ -47,13 +47,18 @@ export default defineNuxtPlugin(() => {
       return entries || [];
     },
 
-    async saveEntries(entries: HabitEntry[]) {
-      await set(DBKeys.ENTRIES, entries);
-    },
-
     async getEntriesByDate(date: string) {
       const entries = await this.getEntries();
       return entries.filter(e => e.date === date);
+    },
+
+    async getEntriesInRange(start: string, end: string) {
+      const entries = await this.getEntries();
+      return entries.filter(e => e.date >= start && e.date <= end);
+    },
+
+    async saveEntries(entries: HabitEntry[]) {
+      await set(DBKeys.ENTRIES, entries);
     },
 
     async addEntry(entry: HabitEntry) {

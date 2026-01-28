@@ -1,5 +1,6 @@
 import { useIndexedDB } from '~/plugins/indexeddb.client';
 import type { Habit, HabitEntry } from '~/types';
+import { isHabitCompleted } from '~/utils/habit';
 
 export const useHabitEntriesStore = defineStore('habitEntries', () => {
   const entries = ref<HabitEntry[]>([]);
@@ -79,12 +80,6 @@ export const useHabitEntriesStore = defineStore('habitEntries', () => {
     return map;
   });
 
-  const isHabitCompleted = (habit: Habit, entry?: HabitEntry) => {
-    if (!entry) return false;
-    if (habit.type === 'boolean') return entry.value === true;
-    return typeof entry.value === 'number' && entry.value >= (habit.target ?? 0);
-  };
-
   const getProgressStats = (habits: Habit[]) => {
     const total = habits.length;
 
@@ -100,7 +95,7 @@ export const useHabitEntriesStore = defineStore('habitEntries', () => {
   };
 
   return {
-    entries, isLoading, entriesMap, isHabitCompleted,
+    entries, isLoading, entriesMap,
     fetchEntriesByDate, upsertEntry, deleteEntry,
     getProgressStats,
   };

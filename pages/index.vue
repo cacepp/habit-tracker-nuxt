@@ -127,11 +127,11 @@ onMounted(async () => {
             :key="habit.id"
             :class="[
               'group relative rounded-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-md shadow-sm hover:shadow-lg transition-all duration-300 p-5 space-y-4',
-              entriesStore.isHabitCompleted(habit, entry) && 'ring-2 ring-green-400/40',
+              isHabitCompleted(habit, entry) && 'ring-2 ring-green-400/40',
             ]"
-            :style="entriesStore.isHabitCompleted(habit, entry)
+            :style="isHabitCompleted(habit, entry)
               ? {
-                backgroundColor: `${habit.color}40`,
+                background: `linear-gradient(135deg, ${habit.color}20 0%, ${habit.color}10 100%)`,
               }
               : {}"
           >
