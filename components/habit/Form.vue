@@ -24,6 +24,7 @@ const formState = reactive<HabitFormSchema>({
   unitId: undefined,
   color: '#2eb648',
   icon: 'i-lucide-calendar-check',
+  isActive: true,
 });
 
 const newUnit = ref<string>('');
@@ -54,6 +55,7 @@ const resetForm = () => {
   formState.unitId = undefined;
   formState.color = '#2eb648';
   formState.icon = 'i-lucide-calendar-check';
+  formState.isActive = true;
 };
 
 watch(
@@ -66,6 +68,7 @@ watch(
       formState.unitId = habit.unitId ?? undefined;
       formState.color = habit.color;
       formState.icon = habit.icon;
+      formState.isActive = habit.isActive ?? true;
     }
     else {
       resetForm();
@@ -78,11 +81,12 @@ const onSubmit = async (event: FormSubmitEvent<HabitFormSchema>) => {
   loading.value = true;
   const data = event.data;
 
-  const habitData: Omit<Habit, 'id' | 'createdAt'> = {
+  const habitData: Omit<Habit, 'id' | 'createdAt' | 'priority'> = {
     name: data.name,
     type: data.type,
     color: data.color,
     icon: data.icon,
+    isActive: data.isActive,
     ...(data.type === 'numeric' && {
       target: data.target!,
       unitId: data.unitId!,
@@ -95,6 +99,7 @@ const onSubmit = async (event: FormSubmitEvent<HabitFormSchema>) => {
         ...habitData,
         id: props.habit.id,
         createdAt: props.habit.createdAt,
+        priority: props.habit.priority,
       });
       toast.add({ title: 'Привычка обновлена', color: 'success' });
       emit('updated');
@@ -146,9 +151,7 @@ const addNewUnit = async () => {
   }
 };
 
-const confirmAddUnit = async () => {
-  await addNewUnit();
-};
+const confirmAddUnit = async () => await addNewUnit();
 
 const editUnit = async (unit: HabitUnit) => {
   editingUnit.value = { ...unit };
@@ -249,6 +252,13 @@ const cancelDeleteUnit = async () => {
           :disabled="loading"
           class="w-full"
         />
+      </UFormField>
+
+      <UFormField
+        label="Активна"
+        name="isActive"
+      >
+        <USwitch v-model="formState.isActive" />
       </UFormField>
 
       <div v-if="isNumeric">

@@ -22,10 +22,15 @@ export const useHabitsStore = defineStore('habits', () => {
     }
   };
 
-  const addHabit = async (data: Omit<Habit, 'id' | 'createdAt'>) => {
+  const addHabit = async (data: Omit<Habit, 'id' | 'createdAt' | 'priority'>) => {
+    const maxPriority = habits.value.length
+      ? Math.max(...habits.value.map(h => h.priority))
+      : -1;
+
     const newHabit: Habit = {
       id: Date.now(),
       createdAt: new Date().toISOString(),
+      priority: maxPriority + 1,
       ...data,
     };
 
@@ -113,6 +118,22 @@ export const useHabitsStore = defineStore('habits', () => {
     await db.saveUnits(units.value.map(u => ({ ...u })));
   };
 
+  const updatePriorities = async (orderedIds: number[]) => {
+    const updated = habits.value.map(habit => ({
+      ...habit,
+      priority: orderedIds.indexOf(habit.id),
+    }));
+
+    habits.value = updated;
+
+    try {
+      await Promise.all(updated.map(h => db.updateHabit(h)));
+    }
+    catch (e) {
+      throw new Error(`Ошибка сохранения порядка привычек: ${e}`);
+    }
+  };
+
   const unitsMap = computed(() => {
     const map = new Map<number, string>();
     units.value.forEach(u => map.set(u.id, u.name));
@@ -134,6 +155,7 @@ export const useHabitsStore = defineStore('habits', () => {
     habits, isLoading, units, habitsWithUnits,
     fetchHabits, addHabit, updateHabit, deleteHabit,
     fetchUnits, addUnit, updateUnit, deleteUnit,
+    updatePriorities,
     init,
   };
 });

@@ -16,6 +16,7 @@ export const formSchema = v.pipe(
     unitId: v.optional(v.number()),
     color: v.string(),
     icon: v.string(),
+    isActive: v.boolean(),
   }),
   v.check(
     data =>

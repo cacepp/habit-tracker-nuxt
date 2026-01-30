@@ -14,6 +14,8 @@ export interface Habit {
   color: string;
   icon: string;
   createdAt: string;
+  isActive: boolean;
+  priority: number;
 }
 
 export function isBooleanHabit(habit: Habit): habit is Habit & { type: 'boolean' } {
