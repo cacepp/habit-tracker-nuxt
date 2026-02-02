@@ -5,6 +5,7 @@ export const useHabitsStore = defineStore('habits', () => {
   const habits = ref<Habit[]>([]);
   const isLoading = ref<boolean>(true);
   const units = ref<HabitUnit[]>([]);
+  const orderIds = ref<number[]>([]);
 
   const db = useIndexedDB();
 
@@ -22,25 +23,23 @@ export const useHabitsStore = defineStore('habits', () => {
     }
   };
 
-  const addHabit = async (data: Omit<Habit, 'id' | 'createdAt' | 'priority'>) => {
-    const maxPriority = habits.value.length
-      ? Math.max(...habits.value.map(h => h.priority))
-      : -1;
-
+  const addHabit = async (data: Omit<Habit, 'id' | 'createdAt'>) => {
     const newHabit: Habit = {
       id: Date.now(),
       createdAt: new Date().toISOString(),
-      priority: maxPriority + 1,
       ...data,
     };
 
     habits.value.push(newHabit);
+    orderIds.value.push(newHabit.id);
 
     try {
       await db.addHabit(newHabit);
+      await db.saveHabitsOrder(orderIds.value);
     }
     catch (e) {
       habits.value = habits.value.filter(h => h.id !== newHabit.id);
+      orderIds.value = orderIds.value.filter(id => id !== newHabit.id);
       throw new Error(`Ошибка добавления привычки: ${e}`);
     }
   };
@@ -62,14 +61,19 @@ export const useHabitsStore = defineStore('habits', () => {
   };
 
   const deleteHabit = async (id: number) => {
-    const prev = [...habits.value];
+    const prevHabits = [...habits.value];
+    const prevOrder = [...orderIds.value];
+
     habits.value = habits.value.filter(h => h.id !== id);
+    orderIds.value = orderIds.value.filter(hId => hId !== id);
 
     try {
       await db.deleteHabit(id);
+      await db.saveHabitsOrder(orderIds.value);
     }
     catch (e) {
-      habits.value = prev;
+      habits.value = prevHabits;
+      orderIds.value = prevOrder;
       throw new Error(`Ошибка удаления привычки: ${e}`);
     }
   };
@@ -80,57 +84,7 @@ export const useHabitsStore = defineStore('habits', () => {
     }
     catch (e) {
       units.value = [];
-      throw new Error(`Ошибка удаления единиц: ${e}`);
-    }
-  };
-
-  const addUnit = async (name: string) => {
-    if (units.value.some(u => u.name.toLowerCase() === name.toLowerCase())) {
-      throw new Error(`Единица измерения с таким именем ("${name}") уже существует`);
-    }
-    const newUnit: HabitUnit = { id: Date.now(), name };
-    units.value.push(newUnit);
-    await db.saveUnits(units.value.map(u => ({ ...u })));
-  };
-
-  const updateUnit = async (id: number, name: string) => {
-    if (units.value.some(u => u.name.toLowerCase() === name.toLowerCase() && u.id !== id)) {
-      throw new Error(`Единица измерения с таким именем ("${name}") уже существует`);
-    }
-    else if (name.length === 0) {
-      throw new Error(`Название не должно быть пустым`);
-    }
-
-    const unit = units.value.find(u => u.id === id);
-    if (!unit) return;
-    unit.name = name;
-    await db.saveUnits(units.value.map(u => ({ ...u })));
-  };
-
-  const deleteUnit = async (id: number) => {
-    const count = habits.value.filter(h => h.unitId === id).length;
-
-    if (count > 0) {
-      throw new Error(`Привычек с такой единицей: ${count}`);
-    }
-
-    units.value = units.value.filter(u => u.id !== id);
-    await db.saveUnits(units.value.map(u => ({ ...u })));
-  };
-
-  const updatePriorities = async (orderedIds: number[]) => {
-    const updated = habits.value.map(habit => ({
-      ...habit,
-      priority: orderedIds.indexOf(habit.id),
-    }));
-
-    habits.value = updated;
-
-    try {
-      await Promise.all(updated.map(h => db.updateHabit(h)));
-    }
-    catch (e) {
-      throw new Error(`Ошибка сохранения порядка привычек: ${e}`);
+      throw new Error(`Ошибка загрузки единиц: ${e}`);
     }
   };
 
@@ -140,22 +94,44 @@ export const useHabitsStore = defineStore('habits', () => {
     return map;
   });
 
+  const orderedHabits = computed(() => {
+    const map = new Map(habits.value.map(h => [h.id, h]));
+    return orderIds.value.map(id => map.get(id)).filter(Boolean) as Habit[];
+  });
+
   const habitsWithUnits = computed(() =>
-    habits.value.map(h => ({
+    orderedHabits.value.map(h => ({
       ...h,
       unitName: h.unitId ? unitsMap.value.get(h.unitId) : undefined,
     })),
   );
 
+  const initOrder = async () => {
+    const savedOrder = await db.getHabitsOrder();
+
+    const ids = habits.value.map(h => h.id);
+    if (savedOrder.length === habits.value.length) {
+      orderIds.value = savedOrder;
+    }
+    else {
+      orderIds.value = ids;
+      await db.saveHabitsOrder(orderIds.value);
+    }
+  };
+
+  const updateOrder = async (newOrder: number[]) => {
+    orderIds.value = [...newOrder];
+    await db.saveHabitsOrder(orderIds.value);
+  };
+
   const init = async () => {
-    await Promise.all([fetchHabits(), fetchUnits()]);
+    await Promise.all([fetchHabits(), fetchUnits(), initOrder()]);
   };
 
   return {
     habits, isLoading, units, habitsWithUnits,
     fetchHabits, addHabit, updateHabit, deleteHabit,
-    fetchUnits, addUnit, updateUnit, deleteUnit,
-    updatePriorities,
-    init,
+    fetchUnits,
+    orderIds, updateOrder, init,
   };
 });

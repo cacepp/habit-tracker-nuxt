@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useSortable } from '@vueuse/integrations/useSortable';
+
 useHead({
   title: 'Главная - Habit Tracker',
 });
@@ -8,16 +10,43 @@ const entriesStore = useHabitEntriesStore();
 
 const selectedDate = ref(toDateString(new Date().toISOString()));
 
+const visibleHabits = computed(() => {
+  const selected = selectedDate.value;
+  return habitsStore.habitsWithUnits.filter(h => h.isActive && toDateString(h.createdAt) <= selected);
+});
+
 const habitsWithEntries = computed(() =>
-  habitsStore.habitsWithUnits.map(habit => ({
+  visibleHabits.value.map(habit => ({
     habit,
     entry: entriesStore.entriesMap.get(habit.id),
   })),
 );
 
-const stats = computed(() =>
-  entriesStore.getProgressStats(habitsStore.habitsWithUnits),
+const stats = computed(() => entriesStore.getProgressStats(visibleHabits.value));
+
+const draggableItems = shallowRef<typeof habitsWithEntries.value>([]);
+const el = useTemplateRef('el');
+
+watch(
+  habitsWithEntries,
+  () => {
+    draggableItems.value = [...habitsWithEntries.value];
+  },
+  { immediate: true },
 );
+
+useSortable(el, draggableItems, {
+  animation: 200,
+  handle: '.drag-handle',
+  onEnd: async (e: { oldIndex: number; newIndex: number }) => {
+    if (e.oldIndex != null && e.newIndex != null) {
+      const movedItem = draggableItems.value.splice(e.oldIndex, 1)[0];
+      draggableItems.value.splice(e.newIndex, 0, movedItem);
+    }
+
+    await habitsStore.updateOrder(draggableItems.value.map(i => i.habit.id));
+  },
+});
 
 const changeDate = async (newDate: string) => {
   selectedDate.value = newDate;
@@ -77,35 +106,9 @@ onMounted(async () => {
       />
     </section>
 
-    <!-- Список привычек -->
+    <!-- HABITS LIST -->
     <section class="min-h-30">
-      <!-- SKELETON STATE -->
       <div
-        v-if="habitsStore.isLoading || entriesStore.isLoading"
-        class="grid gap-5"
-      >
-        <div
-          v-for="i in 1"
-          :key="i"
-          class="rounded-2xl bg-white dark:bg-gray-900 p-5 space-y-4"
-        >
-          <div class="flex justify-between">
-            <USkeleton class="h-5 w-40" />
-            <USkeleton class="h-4 w-12" />
-          </div>
-
-          <USkeleton class="h-10 w-32" />
-          <USkeleton class="h-2 w-full" />
-
-          <div class="pt-2 border-t border-gray-100 dark:border-gray-800">
-            <USkeleton class="h-16 w-full" />
-          </div>
-        </div>
-      </div>
-
-      <!-- HABITS LIST -->
-      <div
-        v-else-if="habitsWithEntries.length"
         class="flex flex-col gap-8"
       >
         <!-- Общий прогресс -->
@@ -121,9 +124,12 @@ onMounted(async () => {
             color="primary"
           />
         </section>
-        <div class="grid gap-5">
+        <div
+          ref="el"
+          class="grid gap-5"
+        >
           <div
-            v-for="{ habit, entry } in habitsWithEntries"
+            v-for="{ habit, entry } in draggableItems"
             :key="habit.id"
             :class="[
               'group relative rounded-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-md shadow-sm hover:shadow-lg transition-all duration-300 p-5 space-y-4',
@@ -135,7 +141,7 @@ onMounted(async () => {
               }
               : {}"
           >
-            <div class="p-5 space-y-4">
+            <div class="p-5 space-y-4 select-none">
               <div class="flex items-start justify-between gap-4">
                 <div class="flex items-center gap-3 min-w-0">
                   <span
@@ -164,6 +170,13 @@ onMounted(async () => {
                     {{ habit.unitName }}
                   </span>
                 </div>
+
+                <span class="drag-handle cursor-grab active:cursor-grabbing text-gray-400">
+                  <UIcon
+                    class="size-12"
+                    name="i-heroicons-arrows-up-down"
+                  />
+                </span>
               </div>
 
               <div class="flex flex-col gap-3">
@@ -227,17 +240,6 @@ onMounted(async () => {
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- EMPTY -->
-      <div
-        v-else
-        class="text-center py-16 text-gray-500"
-      >
-        Нет привычек
-        <span>
-          <UButton><RouterLink to="/habits">Создать</RouterLink></UButton>
-        </span>
       </div>
     </section>
   </div>

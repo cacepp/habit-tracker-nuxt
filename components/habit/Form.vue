@@ -225,7 +225,7 @@ const cancelDeleteUnit = async () => {
     <UForm
       :schema="formSchema"
       :state="formState"
-      class="space-y-4"
+      class="space-y-4 select-none"
       @submit="onSubmit"
     >
       <UFormField

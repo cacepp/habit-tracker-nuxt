@@ -17,4 +17,7 @@ export interface IndexedDBClient {
 
   getUnits(): Promise<HabitUnit[]>;
   saveUnits(units: HabitUnit[]): Promise<void>;
+
+  getHabitsOrder(): Promise<number[]>;
+  saveHabitsOrder(order: number[]): Promise<void>;
 }

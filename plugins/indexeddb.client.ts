@@ -3,6 +3,7 @@ import type { Habit, HabitEntry, HabitUnit, IndexedDBClient } from '~/types';
 
 enum DBKeys {
   HABITS = 'habits',
+  HABITS_ORDER = 'habitsOrder',
   ENTRIES = 'entries',
   UNITS = 'units',
 }
@@ -16,12 +17,12 @@ export default defineNuxtPlugin(() => {
     },
 
     async saveHabits(habits: Habit[]) {
-      await set(DBKeys.HABITS, habits);
+      await set(DBKeys.HABITS, structuredClone(toRaw(habits)));
     },
 
     async addHabit(habit: Habit) {
       const habits = await this.getHabits();
-      const newHabits = [...habits, habit];
+      const newHabits = [...habits, structuredClone(toRaw(habit))];
       await this.saveHabits(newHabits);
     },
 
@@ -39,6 +40,15 @@ export default defineNuxtPlugin(() => {
 
       const entries = await this.getEntries();
       await this.saveEntries(entries.filter(e => e.habitId !== id));
+    },
+
+    // ORDER
+    async getHabitsOrder(): Promise<number[]> {
+      return (await get<number[]>(DBKeys.HABITS_ORDER)) || [];
+    },
+
+    async saveHabitsOrder(order: number[]) {
+      await set(DBKeys.HABITS_ORDER, structuredClone(toRaw(order)));
     },
 
     // ENTRIES
