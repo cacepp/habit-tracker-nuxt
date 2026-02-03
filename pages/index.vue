@@ -11,7 +11,7 @@ const entriesStore = useHabitEntriesStore();
 const selectedDate = ref(toDateString(new Date().toISOString()));
 
 const visibleHabits = computed(() =>
-  habitsStore.habitsWithUnits.filter(h =>
+  habitsStore.orderedHabitsWithUnits.filter(h =>
     isHabitVisibleOnDate(h, selectedDate.value),
   ),
 );

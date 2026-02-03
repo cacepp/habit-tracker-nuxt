@@ -23,15 +23,21 @@ export const useHabitsStore = defineStore('habits', () => {
     }
   };
 
-  const addHabit = async (data: Omit<Habit, 'id' | 'createdAt'>) => {
+  const addHabit = async (data: Omit<Habit, 'id' | 'createdAt'>, highPriority?: boolean) => {
     const newHabit: Habit = {
       id: Date.now(),
       createdAt: new Date().toISOString(),
       ...data,
     };
 
+    if (highPriority) {
+      orderIds.value.unshift(newHabit.id);
+    }
+    else {
+      orderIds.value.push(newHabit.id);
+    }
+
     habits.value.push(newHabit);
-    orderIds.value.push(newHabit.id);
 
     try {
       await db.addHabit(newHabit);
@@ -164,6 +170,13 @@ export const useHabitsStore = defineStore('habits', () => {
   });
 
   const habitsWithUnits = computed(() =>
+    habits.value.map(h => ({
+      ...h,
+      unitName: h.unitId ? unitsMap.value.get(h.unitId) : undefined,
+    })),
+  );
+
+  const orderedHabitsWithUnits = computed(() =>
     orderedHabits.value.map(h => ({
       ...h,
       unitName: h.unitId ? unitsMap.value.get(h.unitId) : undefined,
@@ -193,7 +206,7 @@ export const useHabitsStore = defineStore('habits', () => {
   };
 
   return {
-    habits, isLoading, units, habitsWithUnits,
+    habits, isLoading, units, habitsWithUnits, orderedHabitsWithUnits,
     fetchHabits, addHabit, updateHabit, deleteHabit,
     deactivateHabit, activateHabit,
     fetchUnits, addUnit, updateUnit, deleteUnit,

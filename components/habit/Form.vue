@@ -25,6 +25,7 @@ const formState = reactive<HabitFormSchema>({
   color: '#2eb648',
   icon: 'i-lucide-calendar-check',
   isActive: true,
+  highPriority: false,
 });
 
 const newUnit = ref<string>('');
@@ -56,6 +57,7 @@ const resetForm = () => {
   formState.color = '#2eb648';
   formState.icon = 'i-lucide-calendar-check';
   formState.isActive = true;
+  formState.highPriority = false;
 };
 
 watch(
@@ -121,7 +123,7 @@ const onSubmit = async (event: FormSubmitEvent<HabitFormSchema>) => {
       await habitsStore.addHabit({
         ...habitData,
         deactivatedAt: habitData.isActive ? undefined : new Date().toISOString(),
-      });
+      }, formState.highPriority);
       toast.add({ title: 'Привычка создана', color: 'success' });
       resetForm();
       emit('created');
@@ -270,12 +272,22 @@ const cancelDeleteUnit = async () => {
         />
       </UFormField>
 
-      <UFormField
-        label="Активна"
-        name="isActive"
-      >
-        <USwitch v-model="formState.isActive" />
-      </UFormField>
+      <div class="flex gap-8">
+        <UFormField
+          label="Активна"
+          name="isActive"
+        >
+          <USwitch v-model="formState.isActive" />
+        </UFormField>
+
+        <UFormField
+          label="Высокий проритет"
+          name="highPriority"
+          description="Будет добавлена в начало списка"
+        >
+          <USwitch v-model="formState.highPriority" />
+        </UFormField>
+      </div>
 
       <div v-if="isNumeric">
         <UFormField

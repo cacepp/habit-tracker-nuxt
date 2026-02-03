@@ -17,6 +17,7 @@ export const formSchema = v.pipe(
     color: v.string(),
     icon: v.string(),
     isActive: v.boolean(),
+    highPriority: v.boolean(),
   }),
   v.check(
     data =>
