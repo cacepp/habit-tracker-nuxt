@@ -11,6 +11,8 @@ export const useHabitStats = () => {
   const entries = ref<HabitEntry[]>([]);
   const isLoading = ref(false);
 
+  const today = toDateString(new Date().toISOString());
+
   const getDateRange = () => {
     const start = new Date();
     const end = new Date();
@@ -64,13 +66,16 @@ export const useHabitStats = () => {
     for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
       const dateStr = toDateString(d.toISOString());
       let done = 0;
+      let total = 0;
 
       for (const habit of habitsStore.habits) {
+        if (!isHabitVisibleOnDate(habit, dateStr)) continue;
+
         const entry = entries.value.find(e => e.habitId === habit.id && e.date === dateStr);
         if (isHabitCompleted(habit, entry)) done++;
+        total++;
       }
 
-      const total = habitsStore.habits.length;
       const percent = total ? Math.round((done / total) * 100) : 0;
       result.push({ date: dateStr, percent });
     }
@@ -82,29 +87,39 @@ export const useHabitStats = () => {
     const { start, end } = getDateRange();
     const startDate = new Date(start);
     const endDate = new Date(end);
-    const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
     return habitsStore.habits.map((habit) => {
       let done = 0;
+      let activeDays = 0;
 
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         const dateStr = toDateString(d.toISOString());
+
+        if (!isHabitVisibleOnDate(habit, dateStr)) continue;
+
+        activeDays++;
+
         const entry = entries.value.find(e => e.habitId === habit.id && e.date === dateStr);
         if (isHabitCompleted(habit, entry)) done++;
       }
 
-      const rate = totalDays ? Math.round((done / totalDays) * 100) : 0;
+      const rate = activeDays ? Math.round((done / activeDays) * 100) : 0;
       return { habit, rate };
     }).sort((a, b) => b.rate - a.rate);
   });
 
   const streak = computed(() => {
     let count = 0;
-    const reversed = [...completionByDay.value].reverse();
+
+    const reversed = [...completionByDay.value]
+      .filter(d => d.date <= today)
+      .reverse();
+
     for (const day of reversed) {
       if (day.percent >= 70) count++;
       else break;
     }
+
     return count;
   });
 
