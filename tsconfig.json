@@ -1,4 +1,38 @@
 {
   // https://nuxt.com/docs/guide/concepts/typescript
-  "extends": "./.nuxt/tsconfig.json"
+  "extends": "./.nuxt/tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "target": "ES2022",
+    "noEmitOnError": true,
+    "esModuleInterop": false,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useDefineForClassFields": false,
+    "lib": [
+      "ESNext",
+      "ESNext.AsyncIterable",
+      "DOM"
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "types": [
+      "node",
+      "@pinia/nuxt",
+    ]
+  },
+  "include": [
+    "./.nuxt/*",
+    "./.nuxt/**/*",
+    "**/*",
+    "eslint.config.mjs",
+  ],
+  "exclude": [
+    ".husky",
+    "node_modules",
+  ]
 }

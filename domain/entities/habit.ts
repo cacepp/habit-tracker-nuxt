@@ -1,10 +1,5 @@
 export type HabitType = 'boolean' | 'numeric';
 
-export interface HabitUnit {
-  id: number;
-  name: string;
-}
-
 export interface Habit {
   id: number;
   name: string;
