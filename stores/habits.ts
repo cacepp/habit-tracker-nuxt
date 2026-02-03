@@ -78,6 +78,36 @@ export const useHabitsStore = defineStore('habits', () => {
     }
   };
 
+  const deactivateHabit = async (habit: Habit, date: string) => {
+    const prev = { ...habit };
+
+    habit.isActive = false;
+    habit.deactivatedAt = date;
+
+    try {
+      await db.updateHabit(habit);
+    }
+    catch (e) {
+      Object.assign(habit, prev);
+      throw new Error(`Ошибка деактивации привычки: ${e}`);
+    }
+  };
+
+  const activateHabit = async (habit: Habit) => {
+    const prev = { ...habit };
+
+    habit.isActive = true;
+    habit.deactivatedAt = undefined;
+
+    try {
+      await db.updateHabit(habit);
+    }
+    catch (e) {
+      Object.assign(habit, prev);
+      throw new Error(`Ошибка активации привычки: ${e}`);
+    }
+  };
+
   const fetchUnits = async () => {
     try {
       units.value = await db.getUnits();
@@ -86,6 +116,40 @@ export const useHabitsStore = defineStore('habits', () => {
       units.value = [];
       throw new Error(`Ошибка загрузки единиц: ${e}`);
     }
+  };
+
+  const addUnit = async (name: string) => {
+    if (units.value.some(u => u.name.toLowerCase() === name.toLowerCase())) {
+      throw new Error(`Единица измерения с таким именем ("${name}") уже существует`);
+    }
+    const newUnit: HabitUnit = { id: Date.now(), name };
+    units.value.push(newUnit);
+    await db.saveUnits(units.value.map(u => ({ ...u })));
+  };
+
+  const updateUnit = async (id: number, name: string) => {
+    if (units.value.some(u => u.name.toLowerCase() === name.toLowerCase() && u.id !== id)) {
+      throw new Error(`Единица измерения с таким именем ("${name}") уже существует`);
+    }
+    else if (name.length === 0) {
+      throw new Error(`Название не должно быть пустым`);
+    }
+
+    const unit = units.value.find(u => u.id === id);
+    if (!unit) return;
+    unit.name = name;
+    await db.saveUnits(units.value.map(u => ({ ...u })));
+  };
+
+  const deleteUnit = async (id: number) => {
+    const count = habits.value.filter(h => h.unitId === id).length;
+
+    if (count > 0) {
+      throw new Error(`Привычек с такой единицей: ${count}`);
+    }
+
+    units.value = units.value.filter(u => u.id !== id);
+    await db.saveUnits(units.value.map(u => ({ ...u })));
   };
 
   const unitsMap = computed(() => {
@@ -131,7 +195,8 @@ export const useHabitsStore = defineStore('habits', () => {
   return {
     habits, isLoading, units, habitsWithUnits,
     fetchHabits, addHabit, updateHabit, deleteHabit,
-    fetchUnits,
+    deactivateHabit, activateHabit,
+    fetchUnits, addUnit, updateUnit, deleteUnit,
     orderIds, updateOrder, init,
   };
 });

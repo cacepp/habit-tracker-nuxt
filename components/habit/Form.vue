@@ -81,7 +81,7 @@ const onSubmit = async (event: FormSubmitEvent<HabitFormSchema>) => {
   loading.value = true;
   const data = event.data;
 
-  const habitData: Omit<Habit, 'id' | 'createdAt' | 'priority'> = {
+  const habitData: Omit<Habit, 'id' | 'createdAt'> = {
     name: data.name,
     type: data.type,
     color: data.color,
@@ -95,17 +95,33 @@ const onSubmit = async (event: FormSubmitEvent<HabitFormSchema>) => {
 
   try {
     if (props.habit) {
-      await habitsStore.updateHabit({
+      const wasActive = props.habit.isActive;
+      const willBeActive = data.isActive;
+
+      const today = new Date().toISOString();
+
+      const updatedHabit: Habit = {
+        ...props.habit,
         ...habitData,
-        id: props.habit.id,
-        createdAt: props.habit.createdAt,
-        priority: props.habit.priority,
-      });
+      };
+
+      await habitsStore.updateHabit(updatedHabit);
+
+      if (wasActive && !willBeActive) {
+        await habitsStore.deactivateHabit(updatedHabit, today);
+      }
+
+      if (!wasActive && willBeActive) {
+        await habitsStore.activateHabit(updatedHabit);
+      }
       toast.add({ title: 'Привычка обновлена', color: 'success' });
       emit('updated');
     }
     else {
-      await habitsStore.addHabit(habitData);
+      await habitsStore.addHabit({
+        ...habitData,
+        deactivatedAt: habitData.isActive ? undefined : new Date().toISOString(),
+      });
       toast.add({ title: 'Привычка создана', color: 'success' });
       resetForm();
       emit('created');

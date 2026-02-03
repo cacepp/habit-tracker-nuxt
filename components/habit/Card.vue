@@ -66,6 +66,11 @@ defineEmits<{
       </span>
     </div>
 
+    <span
+      v-if="!habit.isActive"
+      class="text-gray-500 text-sm mb-4"
+    >Отключена</span>
+
     <div class="flex gap-2 mt-auto">
       <UButton
         size="sm"

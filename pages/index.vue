@@ -10,10 +10,11 @@ const entriesStore = useHabitEntriesStore();
 
 const selectedDate = ref(toDateString(new Date().toISOString()));
 
-const visibleHabits = computed(() => {
-  const selected = selectedDate.value;
-  return habitsStore.habitsWithUnits.filter(h => h.isActive && toDateString(h.createdAt) <= selected);
-});
+const visibleHabits = computed(() =>
+  habitsStore.habitsWithUnits.filter(h =>
+    isHabitVisibleOnDate(h, selectedDate.value),
+  ),
+);
 
 const habitsWithEntries = computed(() =>
   visibleHabits.value.map(habit => ({

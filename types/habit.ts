@@ -15,7 +15,7 @@ export interface Habit {
   icon: string;
   createdAt: string;
   isActive: boolean;
-  priority: number;
+  deactivatedAt?: string;
 }
 
 export function isBooleanHabit(habit: Habit): habit is Habit & { type: 'boolean' } {
